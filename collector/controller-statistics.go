@@ -265,7 +265,7 @@ func (c *ControllerStatisticsCollector) collect() ([]AnalysedControllerStatistic
 	}()
 	go func() {
 		defer wg.Done()
-		analyzedStatisticsBody, analyzedStatisticsErr = getRequest(c.target, fmt.Sprintf("/devmgr/v2/storage-systems/%s/analysed-controller-statistics", c.target.Name), c.logger)
+		analyzedStatisticsBody, analyzedStatisticsErr = getRequest(c.target, fmt.Sprintf("/devmgr/v2/storage-systems/%s/analyzed/controller-statistics?statisticsFetchTime=60", c.target.Name), c.logger)
 	}()
 	go func() {
 		defer wg.Done()
@@ -285,7 +285,12 @@ func (c *ControllerStatisticsCollector) collect() ([]AnalysedControllerStatistic
 	if err != nil {
 		return nil, nil, err
 	}
-	err = json.Unmarshal(analyzedStatisticsBody, &analyzedStatistics)
+	var objmap map[string]json.RawMessage
+	err = json.Unmarshal(analyzedStatisticsBody, &objmap)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = json.Unmarshal(objmap["statistics"], &analyzedStatistics)
 	if err != nil {
 		return nil, nil, err
 	}

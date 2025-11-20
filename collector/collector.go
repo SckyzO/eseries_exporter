@@ -88,7 +88,8 @@ func sliceContains(slice []string, str string) bool {
 func getRequest(target config.Target, path string, logger log.Logger) ([]byte, error) {
 	rel := &url.URL{Path: path}
 	u := target.BaseURL.ResolveReference(rel)
-	req, err := http.NewRequest("GET", u.String(), nil)
+	unescaped, err := url.PathUnescape(u.String())
+	req, err := http.NewRequest("GET", unescaped, nil)
 	if err != nil {
 		return nil, err
 	}
