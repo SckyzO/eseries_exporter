@@ -1,0 +1,35 @@
+{
+  "id": "e5660-01",
+  "name": "e5660-01",
+  "model": "5600",
+  "chassisSerialNumber": "721551500105",
+  "wwn": "60080E500043A1B00000000056D6B726",
+  "fwVersion": "08.40.50.00",
+  "nvsramVersion": "N5600-840834-D03",
+  "bootVersion": "08.40.50.00",
+  "appVersion": "08.40.50.00",
+  "status": "optimal",
+  "asupEnabled": true,
+  "passwordSet": true,
+  "certificateStatus": "unknown",
+  "driveChannelPortDisabled": false,
+  "recoveryModeEnabled": false,
+  "securityKeyEnabled": true,
+  "simplexModeEnabled": false,
+  "driveCount": 180,
+  "trayCount": 3,
+  "supportedManagementPorts": [
+    "symbol"
+  ],
+  "driveTypes": [
+    "sas"
+  ],
+  "usedPoolSpace": "544490183983104",
+  "freePoolSpace": "2190433320960",
+  "hotSpareCount": 0,
+  "hotSpareSize": "0",
+  "hostSpareCountInStandby": 0,
+  "hostSparesUsed": 0,
+  "lastContacted": "2020-04-01T15:25:51.890+0000",
+  "bootTime": "2020-01-07T16:35:53.000+0000"
+}
