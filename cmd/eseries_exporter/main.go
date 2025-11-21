@@ -14,9 +14,11 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,11 +26,8 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/promlog"
-	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
 	collector "github.com/sckyzo/eseries_exporter/internal/collectors"
 	"github.com/sckyzo/eseries_exporter/internal/config"
@@ -37,7 +36,61 @@ import (
 var (
 	configFile    = kingpin.Flag("config.file", "Path to exporter config file").Default("eseries_exporter.yaml").String()
 	listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9313").String()
+	logLevel      = kingpin.Flag("log.level", "Log level (debug, info, warn, error)").Default("info").String()
+	logFormat     = kingpin.Flag("log.format", "Log format (text, json)").Default("text").String()
 )
+
+// LoggerAdapter implements go-kit/log.Logger interface but uses slog internally
+type LoggerAdapter struct {
+	*slog.Logger
+	prefix string
+}
+
+func (a *LoggerAdapter) Log(keyvals ...interface{}) error {
+	if len(keyvals)%2 != 0 {
+		return fmt.Errorf("keyvals must have even length")
+	}
+
+	// Extract level and message from keyvals
+	level := slog.LevelInfo
+	var msg string
+
+	attrs := make([]any, 0)
+	for i := 0; i < len(keyvals); i += 2 {
+		key := keyvals[i].(string)
+		val := keyvals[i+1]
+
+		switch key {
+		case "level":
+			if levelStr, ok := val.(string); ok {
+				switch levelStr {
+				case "debug":
+					level = slog.LevelDebug
+				case "info":
+					level = slog.LevelInfo
+				case "warn":
+					level = slog.LevelWarn
+				case "error":
+					level = slog.LevelError
+				}
+			}
+		case "msg":
+			if msgStr, ok := val.(string); ok {
+				msg = msgStr
+			}
+		default:
+			attrs = append(attrs, key, val)
+		}
+	}
+
+	attrs = append(attrs, "prefix", a.prefix)
+	a.Logger.Log(context.Background(), level, msg, attrs...)
+	return nil
+}
+
+func NewCompatibleLogger(logger *slog.Logger, prefix string) log.Logger {
+	return &LoggerAdapter{Logger: logger, prefix: prefix}
+}
 
 func metricsHandler(c *config.Config, logger log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -75,21 +128,22 @@ func metricsHandler(c *config.Config, logger log.Logger) http.HandlerFunc {
 			Timeout: time.Duration(module.Timeout) * time.Second,
 		}
 		if proxyURL.Scheme == "https" {
-			level.Debug(logger).Log("msg", "Setting up SSL transport", "url", module.ProxyURL)
+			compatibleLogger := NewCompatibleLogger(getSlogLogger(), "https")
+			compatibleLogger.Log("msg", "Setting up SSL transport", "url", module.ProxyURL)
 			rootCAs, err := x509.SystemCertPool()
 			if err != nil {
-				level.Error(logger).Log("msg", "Error loading system cert pool, creating empty cert pool", "err", err)
+				compatibleLogger.Log("msg", "Error loading system cert pool, creating empty cert pool", "err", err)
 				rootCAs = x509.NewCertPool()
 			}
 			if module.RootCA != "" {
 				certs, err := os.ReadFile(module.RootCA)
 				if err != nil {
-					level.Error(logger).Log("msg", "Error loading root CA", "rootCA", module.RootCA, "err", err)
+					compatibleLogger.Log("msg", "Error loading root CA", "rootCA", module.RootCA, "err", err)
 					http.Error(w, "Error loading root CA", http.StatusBadRequest)
 					return
 				}
 				if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-					level.Error(logger).Log("msg", "Error appending root CA to pool", "rootCA", module.RootCA, "err", err)
+					compatibleLogger.Log("msg", "Error appending root CA to pool", "rootCA", module.RootCA, "err", err)
 				}
 			}
 			tlsConfig := &tls.Config{
@@ -102,7 +156,7 @@ func metricsHandler(c *config.Config, logger log.Logger) http.HandlerFunc {
 		target.HttpClient = httpClient
 		eseriesCollector := collector.NewCollector(target, logger)
 		for key, collector := range eseriesCollector.Collectors {
-			level.Debug(logger).Log("msg", fmt.Sprintf("Enabled collector %s", key))
+			logger.Log("msg", fmt.Sprintf("Enabled collector %s", key))
 			registry.MustRegister(collector)
 		}
 
@@ -114,23 +168,46 @@ func metricsHandler(c *config.Config, logger log.Logger) http.HandlerFunc {
 	}
 }
 
+// Global slog logger instance
+var globalSlogLogger *slog.Logger
+
+func getSlogLogger() *slog.Logger {
+	return globalSlogLogger
+}
+
 func main() {
 	metricsEndpoint := "/eseries"
-	promlogConfig := &promlog.Config{}
-	flag.AddFlags(kingpin.CommandLine, promlogConfig)
 	kingpin.Version(version.Print("eseries_exporter"))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	logger := promlog.New(promlogConfig)
-	level.Info(logger).Log("msg", "Starting eseries_exporter", "version", version.Info())
-	level.Info(logger).Log("msg", "Build context", "build_context", version.BuildContext())
-	level.Info(logger).Log("msg", "Starting Server", "address", *listenAddress)
+	// Setup structured logging
+	var handler slog.Handler
+	if *logFormat == "json" {
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: getLogLevel(*logLevel),
+		})
+	} else {
+		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: getLogLevel(*logLevel),
+		})
+	}
+
+	logger := slog.New(handler)
+
+	// Set global slog logger
+	globalSlogLogger = logger
+
+	compatibleLogger := NewCompatibleLogger(logger, "main")
+
+	compatibleLogger.Log("msg", "Starting eseries_exporter", "version", version.Info())
+	compatibleLogger.Log("msg", "Build context", "build_context", version.BuildContext())
+	compatibleLogger.Log("msg", "Starting Server", "address", *listenAddress)
 
 	sc := &config.SafeConfig{}
 
 	if err := sc.ReloadConfig(*configFile); err != nil {
-		level.Error(logger).Log("msg", "Error loading config", "err", err)
+		compatibleLogger.Log("msg", "Error loading config", "err", err)
 		os.Exit(1)
 	}
 
@@ -145,11 +222,26 @@ func main() {
              </body>
              </html>`))
 	})
-	http.Handle(metricsEndpoint, metricsHandler(sc.C, logger))
+	http.Handle(metricsEndpoint, metricsHandler(sc.C, compatibleLogger))
 	http.Handle("/metrics", promhttp.Handler())
 	err := http.ListenAndServe(*listenAddress, nil)
 	if err != nil {
-		level.Error(logger).Log("err", err)
+		compatibleLogger.Log("err", err)
 		os.Exit(1)
+	}
+}
+
+func getLogLevel(level string) slog.Level {
+	switch level {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }
