@@ -32,7 +32,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/treydock/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/config"
 )
 
 func TestSystemStatisticsCollector(t *testing.T) {

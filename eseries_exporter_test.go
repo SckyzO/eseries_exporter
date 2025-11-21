@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/log"
-	"github.com/treydock/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/config"
 )
 
 const (

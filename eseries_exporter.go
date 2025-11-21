@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,9 +30,8 @@ import (
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
-	"github.com/treydock/eseries_exporter/collector"
-	"github.com/treydock/eseries_exporter/config"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/sckyzo/eseries_exporter/collector"
+	"github.com/sckyzo/eseries_exporter/config"
 )
 
 var (
