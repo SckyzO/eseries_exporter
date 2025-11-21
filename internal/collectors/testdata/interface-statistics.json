@@ -1,0 +1,28 @@
+{
+  "statistics": [
+    {
+      "interfaceId": "eth0",
+      "totalIops": 1500.5,
+      "readIops": 800.25,
+      "writeIops": 700.25,
+      "totalBytes": 2048576,
+      "readBytes": 1048576,
+      "writeBytes": 1048576,
+      "responseTime": 2.5,
+      "errorsTotal": 5,
+      "linkUtilization": 0.75
+    },
+    {
+      "interfaceId": "eth1", 
+      "totalIops": 1200.0,
+      "readIops": 600.0,
+      "writeIops": 600.0,
+      "totalBytes": 1536000,
+      "readBytes": 768000,
+      "writeBytes": 768000,
+      "responseTime": 1.8,
+      "errorsTotal": 2,
+      "linkUtilization": 0.45
+    }
+  ]
+}

@@ -14,9 +14,14 @@ DOCKER_REPO ?= sckyzo
 DOCKER_IMAGE_NAME ?= $(BINARY_NAME)
 
 # Version information
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "v0.0.0")
+# Allow VERSION to be overridden: make VERSION=v2.1.0 build
+# If VERSION is not provided, use git describe (with fallback to v0.0.0)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo "0.0.0")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# Add VERSION prefix for proper semver format
+VERSION_FULL ?= $(shell if [ "$(VERSION)" = "0.0.0" ]; then echo "v$(VERSION)"; else echo "v$(VERSION)"; fi)
 
 # Go build flags
 LDFLAGS := -s -w \
@@ -163,30 +168,84 @@ dependabot-check: ## Check for outdated dependencies
 # Docker targets
 .PHONY: docker-build
 docker-build: ## Build Docker image
-	@echo "Building Docker image..."
-	docker build -t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):latest .
+	@echo "Building Docker image $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION_FULL)"
+	docker build --no-cache \
+		--build-arg VERSION=$(VERSION) \
+		-t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):latest \
+		-t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION_FULL) \
+		.
+	@echo "Docker image built successfully!"
 
 .PHONY: docker-build-multi
 docker-build-multi: ## Build multi-architecture Docker images
 	@echo "Building multi-architecture Docker images..."
-	docker buildx build --platform $(DOCKER_ARCHS) -t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):latest --push .
+	docker buildx build --no-cache \
+		--platform $(DOCKER_ARCHS) \
+		--build-arg VERSION=$(VERSION) \
+		-t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):latest \
+		-t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION_FULL) \
+		. --push || echo "Note: Push may require 'docker buildx create --use'"
+	@echo "Multi-architecture build completed!"
 
 .PHONY: docker-run
 docker-run: docker-build ## Run Docker container
-	@echo "Running Docker container..."
-	docker run -d --name $(BINARY_NAME) -p 9313:9313 $(DOCKER_REPO)/$(BINARY_NAME):latest
+	@echo "Running Docker container eseries_exporter with version $(VERSION_FULL)"
+	docker run -d --name $(BINARY_NAME) \
+		--read-only \
+		--security-opt no-new-privileges:true \
+		-p 9313:9313 \
+		-e ESERIES_EXPORTER_LOG_LEVEL=info \
+		-e ESERIES_EXPORTER_LOG_FORMAT=text \
+		$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(VERSION_FULL)
+	@echo "Container started! Access at http://localhost:9313"
+	@echo "Health check: http://localhost:9313/health"
+
+.PHONY: docker-run-compose
+docker-run-compose: ## Run with docker-compose (with demo stack)
+	@echo "Starting with docker-compose..."
+	@echo "Setting VERSION=$(VERSION)"
+	VERSION=$(VERSION) docker-compose up -d eseries_exporter
+	@echo "Exporter started at http://localhost:9313"
+	@echo "Health check: http://localhost:9313/health"
+	@echo ""
+	@echo "To start full demo stack (Prometheus + Grafana):"
+	@echo "  VERSION=$(VERSION) docker-compose --profile demo up -d"
+
+.PHONY: docker-run-demo
+docker-run-demo: ## Run full demo stack (exporter + prometheus + grafana)
+	@echo "Starting full demo stack..."
+	@echo "Setting VERSION=$(VERSION)"
+	VERSION=$(VERSION) docker-compose --profile demo up -d
+	@echo ""
+	@echo "Services started:"
+	@echo "  E-Series Exporter: http://localhost:9313"
+	@echo "  Prometheus:        http://localhost:9090"
+	@echo "  Grafana:           http://localhost:3000 (admin/admin)"
 
 .PHONY: docker-stop
 docker-stop: ## Stop Docker container
 	@echo "Stopping Docker container..."
 	docker stop $(BINARY_NAME) 2>/dev/null || true
 	docker rm $(BINARY_NAME) 2>/dev/null || true
+	@echo "Container stopped."
 
 .PHONY: docker-clean
 docker-clean: ## Clean Docker resources
 	@echo "Cleaning Docker resources..."
 	docker system prune -f
 	docker volume prune -f
+	docker image prune -f
+	@echo "Docker cleanup completed."
+
+.PHONY: docker-clean-all
+docker-clean-all: ## Clean all Docker resources (including images)
+	@echo "Cleaning ALL Docker resources..."
+	docker stop $(docker ps -aq) 2>/dev/null || true
+	docker rm $(docker ps -aq) 2>/dev/null || true
+	docker rmi -f $(docker images -q $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)) 2>/dev/null || true
+	docker system prune -af
+	docker volume prune -f
+	@echo "Complete Docker cleanup completed."
 
 # Development targets
 .PHONY: run
@@ -276,9 +335,15 @@ docs: ## Generate documentation (if swag is configured)
 # Health and debugging targets
 .PHONY: version
 version: ## Show version information
-	@echo "$(BINARY_NAME) version $(VERSION)"
+	@echo "$(BINARY_NAME) version $(VERSION_FULL) (raw: $(VERSION))"
 	@echo "Commit: $(COMMIT)"
 	@echo "Build date: $(BUILD_DATE)"
+	@echo ""
+	@echo "Usage examples:"
+	@echo "  make VERSION=2.1.0 build"
+	@echo "  make VERSION=v2.1.0 build"
+	@echo "  make VERSION=2.1.0-rc.1 build"
+	@echo "  make VERSION=1.0.0 docker-build"
 
 .PHONY: env
 env: ## Show Go environment

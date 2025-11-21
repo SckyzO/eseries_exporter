@@ -1,22 +1,119 @@
----
-version: '3'
+# Docker Compose configuration for eseries_exporter
+version: '3.8'
+
 services:
-  eseries_webservices_proxy:
-    container_name: eseries_webservices_proxy
-    build:
-      context: "./webservices_proxy"
-    network_mode: host
-    environment:
-    - ACCEPT_EULA=true
-    volumes:
-    - "/var/lib/eseries_webservices_proxy/working:/opt/netapp/webservices_proxy/working"
-    restart: always
   eseries_exporter:
+    # Build from local Dockerfile with version
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-2.1.0}
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - linux/arm/v7
+    image: sckyzo/eseries_exporter:${VERSION:-2.1.0}
     container_name: eseries_exporter
-    image: treydock/eseries_exporter:v1.0.0
-    network_mode: host
-    command:
-    - "--web.listen-address=:9313"
+    restart: unless-stopped
+    
+    # Security settings
+    user: "1000:1000"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    
+    # Networking
+    ports:
+      - "9313:9313"
+    networks:
+      - eseries_network
+    
+    # Environment variables
+    environment:
+      - ESERIES_EXPORTER_LOG_LEVEL=info
+      - ESERIES_EXPORTER_LOG_FORMAT=json
+      # Add TLS configuration if needed:
+      # - ESERIES_EXPORTER_WEB_TLS_ENABLED=true
+      # - ESERIES_EXPORTER_WEB_TLS_CERT_FILE=/etc/certs/tls.crt
+      # - ESERIES_EXPORTER_WEB_TLS_KEY_FILE=/etc/certs/tls.key
+    
+    # Volume mounts (optional)
     volumes:
-    - "./eseries_exporter.yaml:/eseries_exporter.yaml:ro"
-    restart: always
+      # Mount configuration file if needed
+      # - ./config/eseries_exporter.yaml:/app/config.yaml:ro
+      # Mount certificates if using TLS
+      # - ./certs:/etc/certs:ro
+      # For temporary files (required since we use read-only root)
+      - eseries_tmp:/tmp
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9313/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Labels for better management
+    labels:
+      - "traefik.enable=false"
+      - "com.docker.compose.project=eseries_exporter"
+      - "com.docker.compose.service=eseries_exporter"
+      - "com.docker.compose.version=3.8"
+      
+  # Optional: Add Prometheus for testing
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./examples/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - eseries_network
+    depends_on:
+      - eseries_exporter
+    profiles:
+      - demo
+
+  # Optional: Add Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - eseries_network
+    profiles:
+      - demo
+    depends_on:
+      - prometheus
+
+networks:
+  eseries_network:
+    driver: bridge
+    name: eseries_exporter_network
+
+volumes:
+  eseries_tmp:
+    driver: local
+  grafana_data:
+    driver: local

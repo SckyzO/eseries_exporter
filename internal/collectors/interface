@@ -1,0 +1,116 @@
+// MIT License
+//
+// Copyright (c) 2025 Contributors to the E-Series Exporter project
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+package collector
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/go-kit/log"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/sckyzo/eseries_exporter/internal/config"
+)
+
+func TestInterfaceStatisticsCollector(t *testing.T) {
+	interfaceData, err := os.ReadFile("testdata/interface-statistics.json")
+	if err != nil {
+		t.Fatalf("Error loading fixture data: %s", err.Error())
+	}
+	expected := `
+	# HELP eseries_interface_link_utilization_ratio Interface statistic linkUtilization (0.0-1.0 ratio)
+	# TYPE eseries_interface_link_utilization_ratio gauge
+	eseries_interface_link_utilization_ratio{interface="eth0",interface_label="eth0"} 0.75
+	eseries_interface_link_utilization_ratio{interface="eth1",interface_label="eth1"} 0.45
+	# HELP eseries_interface_iops_total Interface statistic totalIops
+	# TYPE eseries_interface_iops_total counter
+	eseries_interface_iops_total{interface="eth0",interface_label="eth0"} 1500.5
+	eseries_interface_iops_total{interface="eth1",interface_label="eth1"} 1200
+	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
+	# TYPE eseries_exporter_collect_error gauge
+	eseries_exporter_collect_error{collector="interface-statistics"} 0
+	`
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		_, _ = rw.Write(interfaceData)
+	}))
+	defer server.Close()
+	baseURL, _ := url.Parse(server.URL)
+	target := config.Target{
+		Name:       "test",
+		User:       "test",
+		Password:   "test",
+		BaseURL:    baseURL,
+		HttpClient: &http.Client{},
+	}
+	w := log.NewSyncWriter(os.Stderr)
+	logger := log.NewLogfmtLogger(w)
+	collector := NewInterfaceStatisticsExporter(target, logger)
+	gatherers := setupGatherer(collector)
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 22 { // 9 metrics * 2 interfaces + collect_error + collect_duration
+		t.Errorf("Unexpected collection count %d, expected 22", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
+		"eseries_interface_link_utilization_ratio",
+		"eseries_interface_iops_total",
+		"eseries_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
+
+func TestInterfaceStatisticsCollectorError(t *testing.T) {
+	expected := `
+	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
+	# TYPE eseries_exporter_collect_error gauge
+	eseries_exporter_collect_error{collector="interface-statistics"} 1
+	`
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		http.Error(rw, "error", http.StatusNotFound)
+	}))
+	defer server.Close()
+	baseURL, _ := url.Parse(server.URL)
+	target := config.Target{
+		Name:       "test",
+		User:       "test",
+		Password:   "test",
+		BaseURL:    baseURL,
+		HttpClient: &http.Client{},
+	}
+	w := log.NewSyncWriter(os.Stderr)
+	logger := log.NewLogfmtLogger(w)
+	collector := NewInterfaceStatisticsExporter(target, logger)
+	gatherers := setupGatherer(collector)
+	if val, err := testutil.GatherAndCount(gatherers); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	} else if val != 2 {
+		t.Errorf("Unexpected collection count %d, expected 2", val)
+	}
+	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
+		"eseries_interface_link_utilization_ratio", "eseries_exporter_collect_error"); err != nil {
+		t.Errorf("unexpected collecting result:\n%s", err)
+	}
+}
