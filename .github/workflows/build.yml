@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'examples/**'
+
+jobs:
+  build-binaries:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.10'
+          
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+            
+      - name: Build
+        run: |
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/eseries_exporter_linux_amd64 ./cmd/eseries_exporter
+          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/eseries_exporter_linux_arm64 ./cmd/eseries_exporter
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/eseries_exporter_windows_amd64.exe ./cmd/eseries_exporter
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/eseries_exporter_darwin_amd64 ./cmd/eseries_exporter
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/eseries_exporter_darwin_arm64 ./cmd/eseries_exporter
+          
+      - name: Test binaries
+        run: |
+          ./dist/eseries_exporter_linux_amd64 --version
+          ./dist/eseries_exporter_windows_amd64.exe --version
+          
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eseries_exporter-binaries-${{ github.sha }}
+          path: dist/
+          retention-days: 30
