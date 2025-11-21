@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -32,6 +33,7 @@ import (
 	"github.com/prometheus/common/version"
 	collector "github.com/sckyzo/eseries_exporter/internal/collectors"
 	"github.com/sckyzo/eseries_exporter/internal/config"
+	"github.com/sckyzo/eseries_exporter/internal/metrics"
 )
 
 var (
@@ -53,6 +55,10 @@ var (
 
 	// Security configuration file (Prometheus Exporter Toolkit style)
 	webConfigFile = kingpin.Flag("web.config.file", "Path to web config file for TLS/BasicAuth (Prometheus Exporter Toolkit format).").String()
+
+	// Global instances
+	exporterMetrics *metrics.ExporterMetrics
+	healthChecker   *metrics.HealthChecker
 )
 
 // LoggerAdapter implements go-kit/log.Logger interface but uses slog internally
@@ -281,6 +287,11 @@ func main() {
 	compatibleLogger.Log("msg", "Build context", "build_context", version.BuildContext())
 	compatibleLogger.Log("msg", "Starting Server", "address", *listenAddress)
 
+	// Initialize metrics and health checks
+	exporterMetrics = metrics.NewExporterMetrics(version.Version, version.Revision, version.BuildContext())
+	healthChecker = metrics.NewHealthChecker()
+	healthChecker.InitializeDefaultHealthChecks()
+
 	sc := &config.SafeConfig{}
 
 	if err := sc.ReloadConfig(*configFile); err != nil {
@@ -347,6 +358,34 @@ func main() {
 		})
 	}
 	http.Handle("/metrics", exporterMetricsHandler)
+
+	// Health check endpoint
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		// Apply BasicAuth if enabled
+		if authHandler != nil {
+			authHandler(w, r)
+			if w.Header().Get("WWW-Authenticate") != "" {
+				return // Auth failed
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		// Run health checks
+		healthChecker.RunChecks(exporterMetrics)
+
+		// Get health status
+		status := healthChecker.GetHealthStatus(exporterMetrics)
+
+		// Set status code based on health
+		statusCode := http.StatusOK
+		if status.Status != "healthy" {
+			statusCode = http.StatusServiceUnavailable
+		}
+
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(status)
+	})
 
 	// Start server with TLS if enabled
 	var serverErr error
