@@ -32,39 +32,31 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/sckyzo/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
-func TestControllerStatisticsCollector(t *testing.T) {
-	analyzedControllerData, err := os.ReadFile("testdata/analysed-controller-statistics.json")
-	if err != nil {
-		t.Fatalf("Error loading fixture data: %s", err.Error())
-	}
-	controllerData, err := os.ReadFile("testdata/controller-statistics.json")
-	if err != nil {
-		t.Fatalf("Error loading fixture data: %s", err.Error())
-	}
-	inventoryData, err := os.ReadFile("testdata/controllers.json")
+func TestStorageSystemCollector(t *testing.T) {
+	fixtureData, err := os.ReadFile("testdata/storage-systems.json")
 	if err != nil {
 		t.Fatalf("Error loading fixture data: %s", err.Error())
 	}
 	expected := `
-	# HELP eseries_controller_average_read_op_size_bytes Controller statistic averageReadOpSize
-	# TYPE eseries_controller_average_read_op_size_bytes gauge
-	eseries_controller_average_read_op_size_bytes{controller="070000000000000000000001",controller_label="A"} 39687.27392305163
-	eseries_controller_average_read_op_size_bytes{controller="070000000000000000000002",controller_label="B"} 73664.54585344449
 	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
 	# TYPE eseries_exporter_collect_error gauge
-	eseries_exporter_collect_error{collector="controller-statistics"} 0
+	eseries_exporter_collect_error{collector="storage-systems"} 0
+	# HELP eseries_storage_system_status Storage System status, 1=optimal 0=all other states
+	# TYPE eseries_storage_system_status gauge
+	eseries_storage_system_status{status="lockDown"} 0
+	eseries_storage_system_status{status="needsAttn"} 0
+	eseries_storage_system_status{status="neverContacted"} 0
+	eseries_storage_system_status{status="newDevice"} 0
+	eseries_storage_system_status{status="offline"} 0
+	eseries_storage_system_status{status="optimal"} 1
+	eseries_storage_system_status{status="removed"} 0
+	eseries_storage_system_status{status="unknown"} 0
 	`
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if strings.HasSuffix(req.URL.Path, "hardware-inventory") {
-			_, _ = rw.Write(inventoryData)
-		} else if strings.HasSuffix(req.URL.Path, "analysed-controller-statistics") {
-			_, _ = rw.Write(analyzedControllerData)
-		} else {
-			_, _ = rw.Write(controllerData)
-		}
+		_, _ = rw.Write(fixtureData)
 	}))
 	defer server.Close()
 	baseURL, _ := url.Parse(server.URL)
@@ -77,25 +69,24 @@ func TestControllerStatisticsCollector(t *testing.T) {
 	}
 	w := log.NewSyncWriter(os.Stderr)
 	logger := log.NewLogfmtLogger(w)
-	collector := NewControllerStatisticsExporter(target, logger)
+	collector := NewStorageSystemsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 56 {
-		t.Errorf("Unexpected collection count %d, expected 56", val)
+	} else if val != 10 {
+		t.Errorf("Unexpected collection count %d, expected 10", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"eseries_controller_average_read_op_size_bytes",
-		"eseries_exporter_collect_error"); err != nil {
+		"eseries_storage_system_status", "eseries_exporter_collect_error"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
 
-func TestControllerStatisticsCollectorError(t *testing.T) {
+func TestStorageSystemCollectorError(t *testing.T) {
 	expected := `
 	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
 	# TYPE eseries_exporter_collect_error gauge
-	eseries_exporter_collect_error{collector="controller-statistics"} 1
+	eseries_exporter_collect_error{collector="storage-systems"} 1
 	`
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "error", http.StatusNotFound)
@@ -111,7 +102,7 @@ func TestControllerStatisticsCollectorError(t *testing.T) {
 	}
 	w := log.NewSyncWriter(os.Stderr)
 	logger := log.NewLogfmtLogger(w)
-	collector := NewControllerStatisticsExporter(target, logger)
+	collector := NewStorageSystemsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -119,7 +110,7 @@ func TestControllerStatisticsCollectorError(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 2", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"eseries_controller_average_read_op_size_bytes", "eseries_exporter_collect_error"); err != nil {
+		"eseries_storage_system_status", "eseries_exporter_collect_error"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

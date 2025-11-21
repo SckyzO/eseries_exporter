@@ -30,8 +30,8 @@ import (
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
-	"github.com/sckyzo/eseries_exporter/collector"
-	"github.com/sckyzo/eseries_exporter/config"
+	collector "github.com/sckyzo/eseries_exporter/internal/collectors"
+	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 var (

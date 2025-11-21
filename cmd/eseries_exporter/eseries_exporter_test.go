@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/log"
-	"github.com/sckyzo/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 )
 
 func SetupServer() *config.Config {
-	fixtureData, err := os.ReadFile("collector/testdata/drives.json")
+	fixtureData, err := os.ReadFile("../internal/collectors/testdata/drives.json")
 	if err != nil {
 		fmt.Printf("Error loading fixture data: %s", err.Error())
 		os.Exit(1)
@@ -53,7 +53,7 @@ func SetupServer() *config.Config {
 		Password:    "test",
 		Collectors:  []string{"drives"},
 		ProxyURL:    sslServer.URL,
-		RootCA:      "collector/testdata/rootCA.crt",
+		RootCA:      "../internal/collectors/testdata/rootCA.crt",
 		InsecureSSL: true,
 	}
 	sslBadModule := &config.Module{
