@@ -8,6 +8,10 @@ This release represents a complete modernization of the eseries_exporter with si
 
 - **Modern Architecture**: Complete project restructure with cmd/, internal/ package organization
 - **Go 1.24+ Support**: Upgraded from Go 1.17 to Go 1.24.10 with latest toolchain
+- **40+ New Performance Metrics**: Added comprehensive monitoring for network interfaces, storage volumes, and system health
+  - **Interface Statistics**: 9 new metrics (IOPS, throughput, response time, link utilization)
+  - **Volume Statistics**: 11 new metrics (IOPS, throughput, cache performance, latency)
+  - **System Health**: 20 new metrics (firmware, capacity, uptime, security status)
 - **TLS Support**: Added comprehensive TLS encryption for all web endpoints
   - `--web.tls-enabled` flag for enabling TLS
   - `--web.tls-cert-file` and `--web.tls-key-file` for certificate configuration
@@ -43,6 +47,41 @@ This release represents a complete modernization of the eseries_exporter with si
   - Package manager installation guides
   - Comprehensive CLI documentation
   - Prometheus configuration examples
+
+#### 📊 Enhanced Metrics Coverage
+
+- **60+ Total Metrics Available**: Dramatically increased monitoring capabilities
+- **Network Interface Monitoring**: IOPS, throughput, latency, and error tracking
+- **Storage Volume Analytics**: Performance metrics with cache hit ratios
+- **System Health Dashboard**: Firmware versions, capacity planning, uptime monitoring
+- **Proactive Monitoring**: Early detection of performance issues and capacity constraints
+
+#### �️ Security Enhancements
+
+- **TLS Encryption**: All web endpoints can now be secured with TLS
+- **Authentication**: BasicAuth protection for metrics endpoints
+- **Security Scanning**: Automated vulnerability scanning in CI/CD
+- **Modern Standards**: Compliance with Prometheus Exporter Toolkit guidelines
+
+#### 🏗️ Breaking Changes
+
+- **Module Path**: Import path changed from `github.com/treydock/eseries_exporter` to `github.com/sckyzo/eseries_exporter`
+- **New Required Dependencies**: 
+  - github.com/alecthomas/kingpin/v2 (replacing gopkg.in/alecthomas/kingpin.v2)
+  - Standard library log/slog (replacing github.com/go-kit/log)
+
+#### 🐳 Docker Changes
+
+- **New Docker Hub Organization**: Images now published as `sckyzo/eseries_exporter`
+- **Multi-Architecture**: Support for ARM64 and ARM architectures
+- **Security Features**: Docker images support TLS and BasicAuth configurations
+
+#### 📋 Development Improvements
+
+- **Modern Build System**: GoReleaser for automated releases
+- **Code Quality**: golangci-lint integration with optimized rules
+- **Test Coverage**: Enhanced testing with race detection and coverage reporting
+- **Documentation**: Comprehensive README with security examples
 
 #### 🛡️ Security Enhancements
 

@@ -39,6 +39,9 @@ Collectors are enabled or disabled via a config file.
 | storage-systems | Collect status information about storage systems | ✅ | Yes |
 | system-statistics | Collect storage system statistics | ✅ | Yes |
 | hardware-inventory | Collect hardware inventory statuses | ✅ | Yes |
+| **interface-statistics** | Collect network interface performance metrics | ✅ | Yes |
+| **volume-statistics** | Collect storage volume performance metrics | ✅ | Yes |
+| **system-health** | Collect system health and capacity metrics | ✅ | Yes |
 
 ## 🛡️ Security Features
 
