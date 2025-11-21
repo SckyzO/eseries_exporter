@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Migration en masse go-kit/log vers log/slog
+echo "🔧 Migration go-kit/log → log/slog en cours..."
+
+# Fichiers à traiter
+FILES=(
+    "internal/collectors/drives.go"
+    "internal/collectors/hardware-inventory.go"
+    "internal/collectors/storage-systems.go"
+    "internal/collectors/system-statistics.go"
+    "internal/collectors/interface-statistics.go"
+    "internal/collectors/volume-statistics.go"
+    "internal/collectors/system-health.go"
+)
+
+for file in "${FILES[@]}"; do
+    if [ -f "$file" ]; then
+        echo "📝 Migration: $file"
+        
+        # Remplacer les imports
+        sed -i 's|"github.com/go-kit/log"|"log/slog"|g' "$file"
+        sed -i 's|"github.com/go-kit/log/level"|"log/slog"|g' "$file"
+        
+        # Remplacer log.Logger par *slog.Logger
+        sed -i 's/logger\s*log\.Logger/logger *slog.Logger/g' "$file"
+        
+        # Remplacer New*Exporter(target config.Target, logger log.Logger) par New*Exporter(target config.Target, logger *slog.Logger)
+        sed -i 's/(target config\.Target, logger log\.Logger) Collector/(target config.Target, logger *slog.Logger) Collector/g' "$file"
+        
+        # Remplacer level.Debug(logger).Log(...) par logger.Debug(...)
+        sed -i 's/level\.Debug(logger)\.Log("msg", \([^,]*\))/\1/g' "$file"
+        
+        # Remplacer level.Error(logger).Log(...) par logger.Error(...)
+        sed -i 's/level\.Error(logger)\.Log("msg", \([^,]*\))/\1/g' "$file"
+        
+        # Remplacer level.Warn(logger).Log(...) par logger.Warn(...)
+        sed -i 's/level\.Warn(logger)\.Log("msg", \([^,]*\))/\1/g' "$file"
+        
+        # Remplacer level.Info(logger).Log(...) par logger.Info(...)
+        sed -i 's/level\.Info(logger)\.Log("msg", \([^,]*\))/\1/g' "$file"
+        
+        echo "✅ Migration terminée: $file"
+    else
+        echo "❌ Fichier non trouvé: $file"
+    fi
+done
+
+echo "🎯 Migration en masse terminée !"

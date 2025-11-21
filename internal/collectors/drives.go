@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -62,14 +62,14 @@ type DrivePhysicalLocation struct {
 type DrivesCollector struct {
 	Status *prometheus.Desc
 	target config.Target
-	logger log.Logger
+	logger *slog.Logger
 }
 
 func init() {
 	registerCollector("drives", true, NewDrivesExporter)
 }
 
-func NewDrivesExporter(target config.Target, logger log.Logger) Collector {
+func NewDrivesExporter(target config.Target, logger *slog.Logger) Collector {
 	return &DrivesCollector{
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "drive", "status"),
 			"Drive status", []string{"tray", "slot", "status"}, nil),
@@ -83,12 +83,12 @@ func (c *DrivesCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *DrivesCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting drives metrics")
+	c.logger.Debug("Collecting drives metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	metrics, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Drive collection error", "err", err)
 		errorMetric = 1
 	}
 
@@ -104,7 +104,7 @@ func (c *DrivesCollector) Collect(ch chan<- prometheus.Metric) {
 		d.Slot = strconv.Itoa(d.PhysicalLocation.Slot)
 		id := fmt.Sprintf("%s-%s", d.TrayID, d.Slot)
 		if sliceContains(ids, id) {
-			level.Error(c.logger).Log("msg", "Duplicate drive entry detected, skipping.", "tray", d.TrayID, "slot", d.Slot, "status", d.Status)
+			c.logger.Error("Duplicate drive entry detected, skipping", "tray", d.TrayID, "slot", d.Slot, "status", d.Status)
 			errorMetric = 1
 			continue
 		}

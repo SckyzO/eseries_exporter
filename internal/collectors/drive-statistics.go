@@ -16,12 +16,11 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -82,14 +81,14 @@ type DriveStatisticsCollector struct {
 	RandomIOsTotal       *prometheus.Desc
 	RandomBytesTotal     *prometheus.Desc
 	target               config.Target
-	logger               log.Logger
+	logger               *slog.Logger
 }
 
 func init() {
 	registerCollector("drive-statistics", false, NewDriveStatisticsExporter)
 }
 
-func NewDriveStatisticsExporter(target config.Target, logger log.Logger) Collector {
+func NewDriveStatisticsExporter(target config.Target, logger *slog.Logger) Collector {
 	return &DriveStatisticsCollector{
 		AverageReadOpSize: prometheus.NewDesc(prometheus.BuildFQName(namespace, "drive", "average_read_op_size_bytes"),
 			"Drive statistic averageReadOpSize", []string{"tray", "slot"}, nil),
@@ -169,12 +168,12 @@ func (c *DriveStatisticsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *DriveStatisticsCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting drive-statistics metrics")
+	c.logger.Debug("Collecting drive-statistics metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	inventory, analysedDriveStatistics, driveStatistics, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Drive statistics collection error", "err", err)
 		errorMetric = 1
 	}
 

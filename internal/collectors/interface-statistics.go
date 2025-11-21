@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -49,14 +49,14 @@ type InterfaceStatisticsCollector struct {
 	ErrorsTotal     *prometheus.Desc
 	LinkUtilization *prometheus.Desc
 	target          config.Target
-	logger          log.Logger
+	logger          *slog.Logger
 }
 
 func init() {
 	registerCollector("interface-statistics", true, NewInterfaceStatisticsExporter)
 }
 
-func NewInterfaceStatisticsExporter(target config.Target, logger log.Logger) Collector {
+func NewInterfaceStatisticsExporter(target config.Target, logger *slog.Logger) Collector {
 	labels := []string{"interface", "interface_label"}
 	return &InterfaceStatisticsCollector{
 		TotalIops: prometheus.NewDesc(prometheus.BuildFQName(namespace, "interface", "iops_total"),
@@ -95,12 +95,12 @@ func (c *InterfaceStatisticsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *InterfaceStatisticsCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting interface-statistics metrics")
+	c.logger.Debug("Collecting interface statistics metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	statistics, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("interface statistics collection error", "err", err)
 		errorMetric = 1
 	}
 

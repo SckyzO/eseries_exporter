@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -100,14 +100,14 @@ type HardwareInventoryCollector struct {
 	CacheMemoryDimmStatus *prometheus.Desc
 	ThermalSensorStatus   *prometheus.Desc
 	target                config.Target
-	logger                log.Logger
+	logger                *slog.Logger
 }
 
 func init() {
 	registerCollector("hardware-inventory", true, NewHardwareInventoryExporter)
 }
 
-func NewHardwareInventoryExporter(target config.Target, logger log.Logger) Collector {
+func NewHardwareInventoryExporter(target config.Target, logger *slog.Logger) Collector {
 	return &HardwareInventoryCollector{
 		BatteryStatus: prometheus.NewDesc(prometheus.BuildFQName(namespace, "battery", "status"),
 			"Status of battery hardware device", []string{"tray", "slot", "status"}, nil),
@@ -133,12 +133,12 @@ func (c *HardwareInventoryCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *HardwareInventoryCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting hardware-inventory metrics")
+	c.logger.Debug("Collecting hardware inventory metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	inventory, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("hardware inventory collection error", "err", err)
 		errorMetric = 1
 	}
 

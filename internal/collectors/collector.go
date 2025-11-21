@@ -16,12 +16,11 @@ package collector
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -32,7 +31,7 @@ const (
 
 var (
 	collectorState  = make(map[string]bool)
-	factories       = make(map[string]func(target config.Target, logger log.Logger) Collector)
+	factories       = make(map[string]func(target config.Target, logger *slog.Logger) Collector)
 	collectDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
 		"Collector time duration.",
@@ -53,12 +52,12 @@ type EseriesCollector struct {
 	Collectors map[string]Collector
 }
 
-func registerCollector(collector string, isDefaultEnabled bool, factory func(target config.Target, logger log.Logger) Collector) {
+func registerCollector(collector string, isDefaultEnabled bool, factory func(target config.Target, logger *slog.Logger) Collector) {
 	collectorState[collector] = isDefaultEnabled
 	factories[collector] = factory
 }
 
-func NewCollector(target config.Target, logger log.Logger) *EseriesCollector {
+func NewCollector(target config.Target, logger *slog.Logger) *EseriesCollector {
 	collectors := make(map[string]Collector)
 	for key, enabled := range collectorState {
 		enable := false
@@ -69,7 +68,9 @@ func NewCollector(target config.Target, logger log.Logger) *EseriesCollector {
 		}
 		var collector Collector
 		if enable {
-			collector = factories[key](target, log.With(logger, "collector", key, "target", target.Name))
+			// Create a new logger with context attributes
+			subLogger := logger.With("collector", key, "target", target.Name)
+			collector = factories[key](target, subLogger)
 			collectors[key] = collector
 		}
 	}
@@ -85,7 +86,7 @@ func sliceContains(slice []string, str string) bool {
 	return false
 }
 
-func getRequest(target config.Target, path string, logger log.Logger) ([]byte, error) {
+func getRequest(target config.Target, path string, logger *slog.Logger) ([]byte, error) {
 	rel := &url.URL{Path: path}
 	u := target.BaseURL.ResolveReference(rel)
 	unescaped, err := url.PathUnescape(u.String())
@@ -96,7 +97,7 @@ func getRequest(target config.Target, path string, logger log.Logger) ([]byte, e
 	req.Header.Set("Accept", "application/json")
 	req.SetBasicAuth(target.User, target.Password)
 
-	level.Debug(logger).Log("msg", "Performing GET request", "url", u.String())
+	logger.Debug("Performing GET request", "url", u.String())
 	resp, err := target.HttpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -107,7 +108,7 @@ func getRequest(target config.Target, path string, logger log.Logger) ([]byte, e
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		level.Error(logger).Log("msg", "Response error", "code", resp.StatusCode, "body", body)
+		logger.Error("Response error", "code", resp.StatusCode, "body", body)
 		return nil, fmt.Errorf("%s", body)
 	}
 	return body, nil

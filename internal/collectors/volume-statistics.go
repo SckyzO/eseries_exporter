@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -53,14 +53,14 @@ type VolumeStatisticsCollector struct {
 	LatencyMs     *prometheus.Desc
 	CacheHitRatio *prometheus.Desc
 	target        config.Target
-	logger        log.Logger
+	logger        *slog.Logger
 }
 
 func init() {
 	registerCollector("volume-statistics", true, NewVolumeStatisticsExporter)
 }
 
-func NewVolumeStatisticsExporter(target config.Target, logger log.Logger) Collector {
+func NewVolumeStatisticsExporter(target config.Target, logger *slog.Logger) Collector {
 	labels := []string{"volume", "volume_name"}
 	return &VolumeStatisticsCollector{
 		TotalIops: prometheus.NewDesc(prometheus.BuildFQName(namespace, "volume", "iops_total"),
@@ -105,12 +105,12 @@ func (c *VolumeStatisticsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *VolumeStatisticsCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting volume-statistics metrics")
+	c.logger.Debug("Collecting volume statistics metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	statistics, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("volume statistics collection error", "err", err)
 		errorMetric = 1
 	}
 

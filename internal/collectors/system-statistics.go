@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -53,14 +53,14 @@ type SystemStatisticsCollector struct {
 	WritePhysicalIOps       *prometheus.Desc
 	WriteResponseTime       *prometheus.Desc
 	target                  config.Target
-	logger                  log.Logger
+	logger                  *slog.Logger
 }
 
 func init() {
 	registerCollector("system-statistics", true, NewSystemStatisticsExporter)
 }
 
-func NewSystemStatisticsExporter(target config.Target, logger log.Logger) Collector {
+func NewSystemStatisticsExporter(target config.Target, logger *slog.Logger) Collector {
 	return &SystemStatisticsCollector{
 		AverageReadOpSize: prometheus.NewDesc(prometheus.BuildFQName(namespace, "system", "average_read_op_size_bytes"),
 			"System statistic averageReadOpSize", nil, nil),
@@ -107,12 +107,12 @@ func (c *SystemStatisticsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *SystemStatisticsCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting system-statistics metrics")
+	c.logger.Debug("Collecting system statistics metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	statistics, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("system statistics collection error", "err", err)
 		errorMetric = 1
 	}
 

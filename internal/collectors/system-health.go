@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -74,14 +74,14 @@ type SystemHealthCollector struct {
 	PasswordSet         *prometheus.Desc
 	Uptime              *prometheus.Desc
 	target              config.Target
-	logger              log.Logger
+	logger              *slog.Logger
 }
 
 func init() {
 	registerCollector("system-health", true, NewSystemHealthExporter)
 }
 
-func NewSystemHealthExporter(target config.Target, logger log.Logger) Collector {
+func NewSystemHealthExporter(target config.Target, logger *slog.Logger) Collector {
 	labels := []string{"system_id", "system_name", "model"}
 	return &SystemHealthCollector{
 		SystemStatus: prometheus.NewDesc(prometheus.BuildFQName(namespace, "system", "status"),
@@ -147,12 +147,12 @@ func (c *SystemHealthCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *SystemHealthCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting system-health metrics")
+	c.logger.Debug("Collecting system health metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	health, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("system health collection error", "err", err)
 		errorMetric = 1
 	}
 

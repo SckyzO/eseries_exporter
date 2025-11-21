@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -44,14 +44,14 @@ type StorageSystem struct {
 type StorageSystemsCollector struct {
 	Status *prometheus.Desc
 	target config.Target
-	logger log.Logger
+	logger *slog.Logger
 }
 
 func init() {
 	registerCollector("storage-systems", true, NewStorageSystemsExporter)
 }
 
-func NewStorageSystemsExporter(target config.Target, logger log.Logger) Collector {
+func NewStorageSystemsExporter(target config.Target, logger *slog.Logger) Collector {
 	return &StorageSystemsCollector{
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "storage_system", "status"),
 			"Storage System status, 1=optimal 0=all other states", []string{"status"}, nil),
@@ -65,12 +65,12 @@ func (c *StorageSystemsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *StorageSystemsCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting storage-systems metrics")
+	c.logger.Debug("Collecting storage systems metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	metric, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("storage systems collection error", "err", err)
 		errorMetric = 1
 	}
 

@@ -16,11 +16,10 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -105,14 +104,14 @@ type ControllerStatisticsCollector struct {
 	MaxPossibleBpsUnderCurrentLoad  *prometheus.Desc
 	MaxPossibleIopsUnderCurrentLoad *prometheus.Desc
 	target                          config.Target
-	logger                          log.Logger
+	logger                          *slog.Logger
 }
 
 func init() {
 	registerCollector("controller-statistics", true, NewControllerStatisticsExporter)
 }
 
-func NewControllerStatisticsExporter(target config.Target, logger log.Logger) Collector {
+func NewControllerStatisticsExporter(target config.Target, logger *slog.Logger) Collector {
 	labels := []string{"controller", "controller_label"}
 	return &ControllerStatisticsCollector{
 		AverageReadOpSize: prometheus.NewDesc(prometheus.BuildFQName(namespace, "controller", "average_read_op_size_bytes"),
@@ -205,12 +204,12 @@ func (c *ControllerStatisticsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *ControllerStatisticsCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting controller-statistics metrics")
+	c.logger.Debug("Collecting controller-statistics metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	analyzedStatistics, statistics, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Controller statistics collection error", "err", err)
 		errorMetric = 1
 	}
 
