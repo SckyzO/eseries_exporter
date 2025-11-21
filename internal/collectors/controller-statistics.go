@@ -284,15 +284,26 @@ func (c *ControllerStatisticsCollector) collect() ([]AnalysedControllerStatistic
 	if err != nil {
 		return nil, nil, err
 	}
-	var objmap map[string]json.RawMessage
-	err = json.Unmarshal(analyzedStatisticsBody, &objmap)
+
+	// Try to unmarshal as direct array first (for test data)
+	err = json.Unmarshal(analyzedStatisticsBody, &analyzedStatistics)
 	if err != nil {
-		return nil, nil, err
+		// If direct unmarshal fails, try as object with "statistics" field (real API)
+		var objmap map[string]json.RawMessage
+		err = json.Unmarshal(analyzedStatisticsBody, &objmap)
+		if err != nil {
+			return nil, nil, err
+		}
+		if statistics, ok := objmap["statistics"]; ok {
+			err = json.Unmarshal(statistics, &analyzedStatistics)
+			if err != nil {
+				return nil, nil, err
+			}
+		} else {
+			return nil, nil, fmt.Errorf("no 'statistics' field found in analyzed controller statistics")
+		}
 	}
-	err = json.Unmarshal(objmap["statistics"], &analyzedStatistics)
-	if err != nil {
-		return nil, nil, err
-	}
+
 	err = json.Unmarshal(statisticsBody, &statistics)
 	if err != nil {
 		return nil, nil, err

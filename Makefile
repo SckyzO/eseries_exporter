@@ -6,7 +6,7 @@ BINARY_NAME := eseries_exporter
 MAIN_PATH := ./cmd/eseries_exporter
 BUILD_DIR := ./dist
 COVERAGE_FILE := coverage.txt
-GOLANGCI_LINT_VERSION := v1.24.0
+GOLANGCI_LINT_VERSION := v1.64.8
 
 # Docker settings (updated for new repo)
 DOCKER_ARCHS ?= amd64 armv7 arm64 ppc64le s390x
@@ -135,7 +135,7 @@ golangci-lint: ## Run golangci-lint
 		echo "golangci-lint not found. Installing..."; \
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
 	fi
-	golangci-lint run
+	@export PATH="$$PATH:$$(go env GOPATH)/bin" && golangci-lint run
 
 .PHONY: lint
 lint: fmt vet ## Run all linting checks (native Go linters only)
