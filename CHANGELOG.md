@@ -1,3 +1,106 @@
+## 2.0.0 / 2025-11-21
+
+### Major Changes and Refactoring
+
+This release represents a complete modernization of the eseries_exporter with significant architectural improvements and new security features.
+
+#### 🚀 New Features
+
+- **Modern Architecture**: Complete project restructure with cmd/, internal/ package organization
+- **Go 1.24+ Support**: Upgraded from Go 1.17 to Go 1.24.10 with latest toolchain
+- **TLS Support**: Added comprehensive TLS encryption for all web endpoints
+  - `--web.tls-enabled` flag for enabling TLS
+  - `--web.tls-cert-file` and `--web.tls-key-file` for certificate configuration
+  - TLS 1.2+ minimum version for security
+- **BasicAuth Protection**: Added Basic Authentication for all endpoints
+  - `--web.auth-enabled` flag for enabling authentication
+  - `--web.auth.username` and `--web.auth.password` for credentials
+  - `--web.auth.password-file` for secure password storage
+  - Default username: `admin` if not specified
+- **Prometheus Exporter Toolkit Support**: Added `--web.config.file` for standard configuration format
+- **Structured Logging**: Migrated from go-kit/log to Go's built-in log/slog
+  - Support for both text and JSON log formats
+  - Configurable log levels (debug, info, warn, error)
+  - Consistent structured logging throughout the application
+
+#### 🔧 Improvements
+
+- **CI/CD Modernization**: 
+  - Replaced CircleCI with GitHub Actions
+  - Comprehensive CI workflow with linting, testing, and builds
+  - Automated release pipeline with GoReleaser
+  - Multi-OS testing (Ubuntu, Windows, macOS)
+  - Security scanning with Trivy, CodeQL, and GoSec
+- **Modern Dependencies**: Updated all Go modules to latest stable versions
+  - github.com/prometheus/client_golang v1.23.2
+  - github.com/prometheus/common v0.67.3
+  - github.com/alecthomas/kingpin/v2 v2.4.0
+- **Module Path Migration**: Changed from github.com/treydock/eseries_exporter to github.com/sckyzo/eseries_exporter
+- **Docker Improvements**: Multi-architecture image builds (AMD64, ARM64, ARM)
+- **Documentation**: Complete README overhaul with:
+  - Security configuration examples
+  - Docker usage with TLS/BasicAuth
+  - Package manager installation guides
+  - Comprehensive CLI documentation
+  - Prometheus configuration examples
+
+#### 🛡️ Security Enhancements
+
+- **TLS Encryption**: All web endpoints can now be secured with TLS
+- **Authentication**: BasicAuth protection for metrics endpoints
+- **Security Scanning**: Automated vulnerability scanning in CI/CD
+- **Modern Standards**: Compliance with Prometheus Exporter Toolkit guidelines
+
+#### 🏗️ Breaking Changes
+
+- **Module Path**: Import path changed from `github.com/treydock/eseries_exporter` to `github.com/sckyzo/eseries_exporter`
+- **New Required Dependencies**: 
+  - github.com/alecthomas/kingpin/v2 (replacing gopkg.in/alecthomas/kingpin.v2)
+  - Standard library log/slog (replacing github.com/go-kit/log)
+
+#### 🐳 Docker Changes
+
+- **New Docker Hub Organization**: Images now published as `sckyzo/eseries_exporter`
+- **Multi-Architecture**: Support for ARM64 and ARM architectures
+- **Security Features**: Docker images support TLS and BasicAuth configurations
+
+#### 📋 Development Improvements
+
+- **Modern Build System**: GoReleaser for automated releases
+- **Code Quality**: golangci-lint integration with optimized rules
+- **Test Coverage**: Enhanced testing with race detection and coverage reporting
+- **Documentation**: Comprehensive README with security examples
+
+### Migration Guide
+
+#### For Users
+
+1. **Update Import Paths**: Change all imports from `github.com/treydock/eseries_exporter` to `github.com/sckyzo/eseries_exporter`
+2. **New Security Features**: Consider enabling TLS and BasicAuth for production deployments
+3. **Docker**: Update image references from `treydock/eseries_exporter` to `sckyzo/eseries_exporter`
+
+#### For Developers
+
+1. **Dependencies**: Update go.mod with new module path and latest dependencies
+2. **Logging**: Migrate from go-kit/log to log/slog (LoggerAdapter provided for compatibility)
+3. **Build**: Use new Makefile targets and GoReleaser for releases
+
+### Compatibility
+
+- **API Unchanged**: All existing E-Series metrics and collectors remain compatible
+- **Configuration**: Existing YAML configurations continue to work without changes
+- **Prometheus**: No changes required for existing Prometheus configurations
+
+### Known Issues
+
+- None reported
+
+### Contributors
+
+- SckyzO - Complete refactoring and modernization
+
+---
+
 ## 1.3.0 / 2022-03-08
 
 * Improved SSL support for communicating with proxy API
@@ -81,4 +184,3 @@
 ## 0.0.1 / 2020-04-02
 
 * Initial Release
-

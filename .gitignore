@@ -1,7 +1,406 @@
-/.tarballs
-/.build
-/eseries_exporter
-/c.out
-/coverage.html
-/coverage.txt
-/eseries_exporter.yaml
+# Compiled binaries and executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+eseries_exporter
+eseries_exporter_*
+
+# Test binary, built with `go test -c`
+*.test
+
+# Build directories and artifacts
+/dist/
+/build/
+/bin/
+/.target/
+/out/
+
+# Go module cache
+/pkg/mod/
+/vendor/
+
+# Go build cache
+/cache/
+/.cache/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.out
+
+# Coverage files
+coverage.html
+coverage.txt
+*.cover
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+Dockerfile.*
+
+# Configuration files (example files only)
+eseries_exporter.yaml.example
+config/*.yaml.example
+
+# Release artifacts
+*.tar.gz
+*.zip
+*.rpm
+*.deb
+*.msi
+*.dmg
+
+# Documentation
+docs/
+/docs
+
+# Tools and dependencies
+/.tools/
+/.tmp/
+
+# Security files (should not be committed)
+/secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+password
+web-config.yml
+
+# Test data
+/testdata/
+/collector/testdata/
+
+# Temporary directories
+/tmp/
+/temp/
+
+# Archive files
+*.7z
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Runtime and process information
+*.pid
+*.seed
+*.pid.lock
+
+# Editor directories and files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Go specific
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+
+# Build cache
+.cache/
+
+# Build directory
+dist/
+
+# Profiling files
+*.prof
+
+# Binary
+eseries_exporter*
+
+# Tarball (old naming convention)
+/.tarballs/
+
+# Build (old naming convention)
+/.build/
+
+# Configuration files with sensitive data
+*.yaml
+!examples/*.yaml.example
+!*.yaml.template
+
+# Kubernetes files (if any)
+*.kube
+!examples/*.kube.example
+
+# Prometheus rules (if any)
+*.rules.yml
+!examples/*.rules.yml.example
+
+# Security scanning results
+gosec-results.sarif
+trivy-results.sarif
+
+# Generated files
+*.generated.go
+swagger.json
+swagger.yaml
+
+# Local development
+.local/
+local.yaml
+.env.development
+
+# CI/CD specific
+.github/workflows/*.yml.bak
+
+# Package manager files
+Pipfile*
+poetry.lock*
+yarn.lock
+package-lock.json
+
+# Terraform files (if any)
+*.tf
+*.tfvars
+*.tfstate
+*.tfstate.*
+
+# Ansible files (if any)
+*.yml
+!examples/*.yml.example
+*.yaml
+!examples/*.yaml.example
+
+# Shell scripts
+*.sh
+!*.sh.example
+
+# Certificate and key files (never commit these)
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
+*.der
+*.csr
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# Testing
+/test-results/
+*.xml
+
+# Performance and profiling
+*.pprof
+*.trace
+
+# Archive files
+*.tar
+*.tgz
+*.tar.gz
+*.zip
+*.rar
+
+# Package files
+*.deb
+*.rpm
+*.pkg
+*.dmg
+
+# Generated documentation
+godoc/
+
+# Generated mocks
+*.mock.go
+
+# Local configuration overrides
+config.local.yaml
+config.development.yaml
+config.production.yaml
+
+# Temporary build files
+*.build
+*.tmp
+
+# Editor backup files
+*~
+.#*
+#*#
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Vim
+*.swp
+*.swo
+*.swn
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Temporary folders
+tmp/
+temp/
+
+# Compiled source
+*.o
+*.a
+*.lib
+
+# Object files
+*.obj
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Rust
+target/
+Cargo.lock
+
+# Swift
+*.xcodeproj
+*.xcworkspace
+
+# Android
+*.apk
+*.ap_
+*.aab
+local.properties
+
+# iOS
+*.ipa
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# React Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+
+# Unreal Engine
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
