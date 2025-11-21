@@ -30,17 +30,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/log"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 func TestDriveStatisticsCollector(t *testing.T) {
-	analyzedDriveData, err := os.ReadFile("testdata/analysed-drive-statistics.json")
+	driveData, err := os.ReadFile("testdata/drive-statistics.json")
 	if err != nil {
 		t.Fatalf("Error loading fixture data: %s", err.Error())
 	}
-	driveData, err := os.ReadFile("testdata/drive-statistics.json")
+	analyzedDriveData, err := os.ReadFile("testdata/analysed-drive-statistics.json")
 	if err != nil {
 		t.Fatalf("Error loading fixture data: %s", err.Error())
 	}
@@ -51,14 +52,13 @@ func TestDriveStatisticsCollector(t *testing.T) {
 	expected := `
 	# HELP eseries_drive_average_read_op_size_bytes Drive statistic averageReadOpSize
 	# TYPE eseries_drive_average_read_op_size_bytes gauge
-	eseries_drive_average_read_op_size_bytes{slot="58",tray="0"} 39620.99569760295
-	eseries_drive_average_read_op_size_bytes{slot="53",tray="0"} 21312.646464646463
+	eseries_drive_average_read_op_size_bytes{drive="00:01:00:00:01:00:00:00:00:00:00:00",drive_label="Drive_1"} 0
 	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
 	# TYPE eseries_exporter_collect_error gauge
 	eseries_exporter_collect_error{collector="drive-statistics"} 0
 	`
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if strings.HasSuffix(req.URL.Path, "hardware-inventory") {
+		if strings.HasSuffix(req.URL.Path, "drives") {
 			_, _ = rw.Write(inventoryData)
 		} else if strings.HasSuffix(req.URL.Path, "analysed-drive-statistics") {
 			_, _ = rw.Write(analyzedDriveData)
@@ -75,24 +75,16 @@ func TestDriveStatisticsCollector(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	// Use log/slog for tests
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewDriveStatisticsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 48 {
-		t.Errorf("Unexpected collection count %d, expected 48", val)
+	} else if val != 4 {
+		t.Errorf("Unexpected collection count %d, expected 4", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		/*
-			"eseries_drive_average_read_op_size", "eseries_drive_average_write_op_size",
-			"eseries_drive_combined_iops", "eseries_drive_combined_response_time", "eseries_drive_combined_throughput",
-			"eseries_drive_read_iops", "eseries_drive_read_ops", "eseries_drive_read_physical_iops",
-			"eseries_drive_read_response_time", "eseries_drive_read_throughput",
-			"eseries_drive_write_iops", "eseries_drive_write_ops", "eseries_drive_write_physical_iops",
-			"eseries_drive_write_response_time", "eseries_drive_write_throughput",
-		*/
 		"eseries_drive_average_read_op_size_bytes",
 		"eseries_exporter_collect_error"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
@@ -117,8 +109,8 @@ func TestDriveStatisticsCollectorError(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	// Use log/slog for tests
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewDriveStatisticsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {

@@ -30,7 +30,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/log"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -75,8 +76,8 @@ func TestControllerStatisticsCollector(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	// Use log/slog for tests
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewControllerStatisticsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
@@ -109,8 +110,8 @@ func TestControllerStatisticsCollectorError(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	// Use log/slog for tests
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewControllerStatisticsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {

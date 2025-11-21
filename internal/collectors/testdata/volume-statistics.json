@@ -1,0 +1,46 @@
+{
+  "statistics": [
+    {
+      "volumeId": "vol001",
+      "volumeName": "production_data",
+      "totalIops": 2500.0,
+      "readIops": 1500.0,
+      "writeIops": 1000.0,
+      "totalBytes": 10485760,
+      "readBytes": 6291456,
+      "writeBytes": 4194304,
+      "responseTime": 3.2,
+      "cacheHits": 1850,
+      "cacheMisses": 150,
+      "latencyMs": 1.8
+    },
+    {
+      "volumeId": "vol002",
+      "volumeName": "backup_data", 
+      "totalIops": 800.0,
+      "readIops": 400.0,
+      "writeIops": 400.0,
+      "totalBytes": 3145728,
+      "readBytes": 1572864,
+      "writeBytes": 1572864,
+      "responseTime": 5.1,
+      "cacheHits": 600,
+      "cacheMisses": 200,
+      "latencyMs": 2.9
+    },
+    {
+      "volumeId": "vol003",
+      "volumeName": "logs_volume",
+      "totalIops": 300.0,
+      "readIops": 100.0,
+      "writeIops": 200.0,
+      "totalBytes": 524288,
+      "readBytes": 174763,
+      "writeBytes": 349525,
+      "responseTime": 1.2,
+      "cacheHits": 220,
+      "cacheMisses": 80,
+      "latencyMs": 0.8
+    }
+  ]
+}

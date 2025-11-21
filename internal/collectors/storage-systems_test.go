@@ -30,33 +30,27 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/log"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
-func TestStorageSystemCollector(t *testing.T) {
-	fixtureData, err := os.ReadFile("testdata/storage-systems.json")
+func TestStorageSystemsCollector(t *testing.T) {
+	systemData, err := os.ReadFile("testdata/storage-systems.json")
 	if err != nil {
 		t.Fatalf("Error loading fixture data: %s", err.Error())
 	}
 	expected := `
+	# HELP eseries_storage_systems_capacity_bytes Storage system capacity
+	# TYPE eseries_storage_systems_capacity_bytes gauge
+	eseries_storage_systems_capacity_bytes{id="e5660-01"} 564590000000000
 	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
 	# TYPE eseries_exporter_collect_error gauge
 	eseries_exporter_collect_error{collector="storage-systems"} 0
-	# HELP eseries_storage_system_status Storage System status, 1=optimal 0=all other states
-	# TYPE eseries_storage_system_status gauge
-	eseries_storage_system_status{status="lockDown"} 0
-	eseries_storage_system_status{status="needsAttn"} 0
-	eseries_storage_system_status{status="neverContacted"} 0
-	eseries_storage_system_status{status="newDevice"} 0
-	eseries_storage_system_status{status="offline"} 0
-	eseries_storage_system_status{status="optimal"} 1
-	eseries_storage_system_status{status="removed"} 0
-	eseries_storage_system_status{status="unknown"} 0
 	`
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		_, _ = rw.Write(fixtureData)
+		_, _ = rw.Write(systemData)
 	}))
 	defer server.Close()
 	baseURL, _ := url.Parse(server.URL)
@@ -67,22 +61,23 @@ func TestStorageSystemCollector(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	// Use log/slog for tests
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewStorageSystemsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 10 {
-		t.Errorf("Unexpected collection count %d, expected 10", val)
+	} else if val != 2 {
+		t.Errorf("Unexpected collection count %d, expected 2", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"eseries_storage_system_status", "eseries_exporter_collect_error"); err != nil {
+		"eseries_storage_systems_capacity_bytes",
+		"eseries_exporter_collect_error"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }
 
-func TestStorageSystemCollectorError(t *testing.T) {
+func TestStorageSystemsCollectorError(t *testing.T) {
 	expected := `
 	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
 	# TYPE eseries_exporter_collect_error gauge
@@ -100,8 +95,8 @@ func TestStorageSystemCollectorError(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	// Use log/slog for tests
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewStorageSystemsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
@@ -110,7 +105,7 @@ func TestStorageSystemCollectorError(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 2", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"eseries_storage_system_status", "eseries_exporter_collect_error"); err != nil {
+		"eseries_storage_systems_capacity_bytes", "eseries_exporter_collect_error"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

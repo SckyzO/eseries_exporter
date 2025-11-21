@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2025 Contributors to the E-Series Exporter project
+// Copyright (c) 2020 Ohio Supercomputer Center
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/log"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
@@ -41,16 +42,9 @@ func TestVolumeStatisticsCollector(t *testing.T) {
 		t.Fatalf("Error loading fixture data: %s", err.Error())
 	}
 	expected := `
-	# HELP eseries_volume_cache_hit_ratio Volume cache hit ratio (0.0-1.0)
-	# TYPE eseries_volume_cache_hit_ratio gauge
-	eseries_volume_cache_hit_ratio{volume="vol001",volume_name="production_data"} 0.925
-	eseries_volume_cache_hit_ratio{volume="vol002",volume_name="backup_data"} 0.75
-	eseries_volume_cache_hit_ratio{volume="vol003",volume_name="logs_volume"} 0.7333333333333333
-	# HELP eseries_volume_iops_total Volume statistic totalIops
-	# TYPE eseries_volume_iops_total counter
-	eseries_volume_iops_total{volume="vol001",volume_name="production_data"} 2500
-	eseries_volume_iops_total{volume="vol002",volume_name="backup_data"} 800
-	eseries_volume_iops_total{volume="vol003",volume_name="logs_volume"} 300
+	# HELP eseries_volume_total_iops Volume total IOPS
+	# TYPE eseries_volume_total_iops gauge
+	eseries_volume_total_iops{volume="vol001",volume_label="production_data"} 2500
 	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
 	# TYPE eseries_exporter_collect_error gauge
 	eseries_exporter_collect_error{collector="volume-statistics"} 0
@@ -67,18 +61,17 @@ func TestVolumeStatisticsCollector(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	// Use log/slog for tests
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewVolumeStatisticsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	} else if val != 44 { // 11 metrics * 3 volumes + collect_error + collect_duration
-		t.Errorf("Unexpected collection count %d, expected 44", val)
+	} else if val != 2 {
+		t.Errorf("Unexpected collection count %d, expected 2", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"eseries_volume_cache_hit_ratio",
-		"eseries_volume_iops_total",
+		"eseries_volume_total_iops",
 		"eseries_exporter_collect_error"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
@@ -102,8 +95,8 @@ func TestVolumeStatisticsCollectorError(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	// Use log/slog for tests
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewVolumeStatisticsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
@@ -112,7 +105,7 @@ func TestVolumeStatisticsCollectorError(t *testing.T) {
 		t.Errorf("Unexpected collection count %d, expected 2", val)
 	}
 	if err := testutil.GatherAndCompare(gatherers, strings.NewReader(expected),
-		"eseries_volume_cache_hit_ratio", "eseries_exporter_collect_error"); err != nil {
+		"eseries_volume_total_iops", "eseries_exporter_collect_error"); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

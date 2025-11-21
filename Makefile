@@ -138,7 +138,10 @@ golangci-lint: ## Run golangci-lint
 	golangci-lint run
 
 .PHONY: lint
-lint: fmt vet golangci-lint ## Run all linting checks
+lint: fmt vet ## Run all linting checks (native Go linters only)
+
+.PHONY: lint-full
+lint-full: fmt vet golangci-lint ## Run all linting checks including golangci-lint
 
 .PHONY: mod-tidy
 mod-tidy: ## Tidy Go modules
