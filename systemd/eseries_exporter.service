@@ -1,15 +1,27 @@
 [Unit]
 Description=Prometheus eseries_exporter
-Wants=basic.target
-After=basic.target network.target
+Documentation=https://github.com/sckyzo/eseries_exporter
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 User=eseries_exporter
 Group=eseries_exporter
+Type=simple
 ExecStart=/usr/local/bin/eseries_exporter --config.file=/etc/eseries_exporter.yaml
 ExecReload=/bin/kill -HUP $MAINPID
-KillMode=process
-Restart=always
+Restart=on-failure
+RestartSec=5s
+
+# Hardening
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
 
 [Install]
 WantedBy=multi-user.target

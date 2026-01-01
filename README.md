@@ -58,17 +58,34 @@ modules:
     timeout: 10
 ```
 
-## Usage
+## Installation & Usage
 
-### Binaries
+### 1. From Binaries (Systemd)
 
-Download the latest release for your platform.
+Download the latest release from the [Releases page](https://github.com/sckyzo/eseries_exporter/releases).
 
-```bash
-./eseries_exporter --config.file=eseries_exporter.yaml
-```
+1.  **Create user**:
+    ```bash
+    useradd -r -s /sbin/nologin eseries_exporter
+    ```
 
-### Docker
+2.  **Install binary**:
+    ```bash
+    cp eseries_exporter /usr/local/bin/
+    chmod +x /usr/local/bin/eseries_exporter
+    ```
+
+3.  **Configure**:
+    Copy your `eseries_exporter.yaml` to `/etc/eseries_exporter.yaml`.
+
+4.  **Install Service**:
+    ```bash
+    cp systemd/eseries_exporter.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable --now eseries_exporter
+    ```
+
+### 2. Docker
 
 ```bash
 docker run -d -p 9313:9313 -v "$(pwd)/eseries_exporter.yaml:/eseries_exporter.yaml:ro" sckyzo/eseries_exporter
