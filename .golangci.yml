@@ -1,3 +1,22 @@
 linters-settings:
   errcheck:
-    exclude: .golangci.errcheck-exclude
+    exclude-functions:
+      - (net/http.ResponseWriter).Write
+      - (*log/slog.Logger).Info
+      - (*log/slog.Logger).Debug
+      - (*log/slog.Logger).Error
+      - (*log/slog.Logger).Warn
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
