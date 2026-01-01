@@ -9,6 +9,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,13 +25,17 @@ jobs:
 
       - name: Generate Changelog
         id: changelog
-        uses: 
-          # Simple placeholder, usually we use git-cliff or similar
-          # For now, we just dump the git log since last tag
-          run: |
-            echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-            git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --oneline >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
+        shell: bash
+        run: |
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          # Fallback if git describe fails (e.g. first tag)
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            git log --oneline >> $GITHUB_ENV
+          else
+            git log $PREV_TAG..HEAD --oneline >> $GITHUB_ENV
+          fi
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
