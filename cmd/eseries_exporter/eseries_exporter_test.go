@@ -75,7 +75,7 @@ go func() {
 		err := http.ListenAndServe(address, nil)
 		if err != nil && err != http.ErrServerClosed {
 			// This might fail if port is taken, but for test logic we hope it's free
-			// t.Errorf here would be racy
+			fmt.Printf("Server error: %v\n", err)
 		}
 	}()
 	
