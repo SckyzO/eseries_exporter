@@ -1,28 +1,14 @@
-// Copyright 2020 Trey Dockendorf
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package collector
 
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/treydock/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 type AnalysedControllerStatistics struct {
@@ -105,14 +91,14 @@ type ControllerStatisticsCollector struct {
 	MaxPossibleBpsUnderCurrentLoad  *prometheus.Desc
 	MaxPossibleIopsUnderCurrentLoad *prometheus.Desc
 	target                          config.Target
-	logger                          log.Logger
+	logger                          *slog.Logger
 }
 
 func init() {
 	registerCollector("controller-statistics", true, NewControllerStatisticsExporter)
 }
 
-func NewControllerStatisticsExporter(target config.Target, logger log.Logger) Collector {
+func NewControllerStatisticsExporter(target config.Target, logger *slog.Logger) Collector {
 	labels := []string{"controller", "controller_label"}
 	return &ControllerStatisticsCollector{
 		AverageReadOpSize: prometheus.NewDesc(prometheus.BuildFQName(namespace, "controller", "average_read_op_size_bytes"),
@@ -205,12 +191,12 @@ func (c *ControllerStatisticsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *ControllerStatisticsCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting controller-statistics metrics")
+	c.logger.Debug("Collecting controller-statistics metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	analyzedStatistics, statistics, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Collection failed", "error", err)
 		errorMetric = 1
 	}
 
@@ -285,14 +271,19 @@ func (c *ControllerStatisticsCollector) collect() ([]AnalysedControllerStatistic
 	if err != nil {
 		return nil, nil, err
 	}
-	var objmap map[string]json.RawMessage
-	err = json.Unmarshal(analyzedStatisticsBody, &objmap)
+	// Try to unmarshal as array first (direct statistics)
+	err = json.Unmarshal(analyzedStatisticsBody, &analyzedStatistics)
 	if err != nil {
-		return nil, nil, err
-	}
-	err = json.Unmarshal(objmap["statistics"], &analyzedStatistics)
-	if err != nil {
-		return nil, nil, err
+		// Fallback: try to unmarshal as object with "statistics" field (older API?)
+		var objmap map[string]json.RawMessage
+		if errObj := json.Unmarshal(analyzedStatisticsBody, &objmap); errObj == nil {
+			if val, ok := objmap["statistics"]; ok {
+				err = json.Unmarshal(val, &analyzedStatistics)
+			}
+		}
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	err = json.Unmarshal(statisticsBody, &statistics)
 	if err != nil {

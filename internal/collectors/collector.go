@@ -1,29 +1,15 @@
-// Copyright 2020 Trey Dockendorf
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package collector
 
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/treydock/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 const (
@@ -32,7 +18,7 @@ const (
 
 var (
 	collectorState  = make(map[string]bool)
-	factories       = make(map[string]func(target config.Target, logger log.Logger) Collector)
+	factories       = make(map[string]func(target config.Target, logger *slog.Logger) Collector)
 	collectDuration = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "exporter", "collector_duration_seconds"),
 		"Collector time duration.",
@@ -44,7 +30,6 @@ var (
 )
 
 type Collector interface {
-	// Get new metrics and expose them via prometheus registry.
 	Describe(ch chan<- *prometheus.Desc)
 	Collect(ch chan<- prometheus.Metric)
 }
@@ -53,12 +38,12 @@ type EseriesCollector struct {
 	Collectors map[string]Collector
 }
 
-func registerCollector(collector string, isDefaultEnabled bool, factory func(target config.Target, logger log.Logger) Collector) {
+func registerCollector(collector string, isDefaultEnabled bool, factory func(target config.Target, logger *slog.Logger) Collector) {
 	collectorState[collector] = isDefaultEnabled
 	factories[collector] = factory
 }
 
-func NewCollector(target config.Target, logger log.Logger) *EseriesCollector {
+func NewCollector(target config.Target, logger *slog.Logger) *EseriesCollector {
 	collectors := make(map[string]Collector)
 	for key, enabled := range collectorState {
 		enable := false
@@ -67,10 +52,11 @@ func NewCollector(target config.Target, logger log.Logger) *EseriesCollector {
 		} else if sliceContains(target.Collectors, key) {
 			enable = true
 		}
-		var collector Collector
+		
 		if enable {
-			collector = factories[key](target, log.With(logger, "collector", key, "target", target.Name))
-			collectors[key] = collector
+			// Create a child logger with collector context
+			collectorLogger := logger.With("collector", key, "target", target.Name)
+			collectors[key] = factories[key](target, collectorLogger)
 		}
 	}
 	return &EseriesCollector{Collectors: collectors}
@@ -85,10 +71,17 @@ func sliceContains(slice []string, str string) bool {
 	return false
 }
 
-func getRequest(target config.Target, path string, logger log.Logger) ([]byte, error) {
+func getRequest(target config.Target, path string, logger *slog.Logger) ([]byte, error) {
 	rel := &url.URL{Path: path}
 	u := target.BaseURL.ResolveReference(rel)
+	// We handle potential unescaping errors implicitly via URL parsing
 	unescaped, err := url.PathUnescape(u.String())
+	if err != nil {
+		logger.Error("Failed to unescape URL", "url", u.String(), "error", err)
+		// Fallback to original URL if unescape fails
+		unescaped = u.String()
+	}
+	
 	req, err := http.NewRequest("GET", unescaped, nil)
 	if err != nil {
 		return nil, err
@@ -96,18 +89,21 @@ func getRequest(target config.Target, path string, logger log.Logger) ([]byte, e
 	req.Header.Set("Accept", "application/json")
 	req.SetBasicAuth(target.User, target.Password)
 
-	level.Debug(logger).Log("msg", "Performing GET request", "url", u.String())
+	logger.Debug("Performing GET request", "url", u.String())
+	
 	resp, err := target.HttpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
+	
 	if resp.StatusCode != http.StatusOK {
-		level.Error(logger).Log("msg", "Response error", "code", resp.StatusCode, "body", body)
+		logger.Error("Response error", "code", resp.StatusCode, "body", string(body))
 		return nil, fmt.Errorf("%s", body)
 	}
 	return body, nil

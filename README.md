@@ -1,34 +1,38 @@
-[![Build Status](https://circleci.com/gh/treydock/eseries_exporter/tree/master.svg?style=shield)](https://circleci.com/gh/treydock/eseries_exporter)
-[![GitHub release](https://img.shields.io/github/v/release/treydock/eseries_exporter?include_prereleases&sort=semver)](https://github.com/treydock/eseries_exporter/releases/latest)
-![GitHub All Releases](https://img.shields.io/github/downloads/treydock/eseries_exporter/total)
-[![codecov](https://codecov.io/gh/treydock/eseries_exporter/branch/master/graph/badge.svg)](https://codecov.io/gh/treydock/eseries_exporter)
+# NetApp E-Series Prometheus Exporter
 
-# NetApp E-Series Prometheus exporter
+[![Build Status](https://github.com/sckyzo/eseries_exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/sckyzo/eseries_exporter/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sckyzo/eseries_exporter)](https://goreportcard.com/report/github.com/sckyzo/eseries_exporter)
 
-The E-Series exporter collects metrics from NetApp E-Series via the SANtricity Web Services Proxy.
+The E-Series exporter collects metrics from NetApp E-Series via the SANtricity Web Services Proxy (REST API).
 
-This exporter is intended to query multiple E-Series controllers from an external host.
+This exporter is designed to query multiple E-Series controllers from an external host.
 
-The `/eseries` metrics endpoint exposes E-Series metrics and requires the `target` parameter.
+- The `/eseries` metrics endpoint exposes E-Series metrics and requires the `target` parameter.
+- The `/metrics` endpoint exposes internal process metrics for this exporter.
 
-The `/metrics` endpoint exposes Go and process metrics for this exporter.
+## Architecture
+
+This project follows standard Go layout:
+- `cmd/eseries_exporter`: Main entry point.
+- `internal/collectors`: Metric collectors logic.
+- `internal/config`: Configuration handling.
 
 ## Collectors
 
-Collectors are enabled or disabled via a config file.
+Collectors are enabled or disabled via the config file.
 
-Name | Description | Default
------|-------------|--------
-drives | Collect status information about drives | Enabled
-drive-statistics | Collect statistics on drives | Disabled
-controller-statistics | Collect controller statistics | Enabled
-storage-systems | Collect status information about storage systems | Enabled
-system-statistics | Collect storage system statistics | Enabled
-hardware-inventory | Collect hardware inventory statuses | Enabled
+| Name | Description | Default |
+|------|-------------|---------|
+| drives | Collect status information about drives | Enabled |
+| drive-statistics | Collect statistics on drives | Disabled |
+| controller-statistics | Collect controller statistics | Enabled |
+| storage-systems | Collect status information about storage systems | Enabled |
+| system-statistics | Collect storage system statistics | Enabled |
+| hardware-inventory | Collect hardware inventory statuses | Enabled |
 
 ## Configuration
 
-The configuration defines targets that are to be queried. Example:
+The configuration defines targets (modules) that are to be queried. Example `eseries_exporter.yaml`:
 
 ```yaml
 modules:
@@ -54,163 +58,60 @@ modules:
     timeout: 10
 ```
 
-This exporter could then be queried via one of these two commands below.  The `eseries2` target will only run the `drives` and `storage-systems` collectors.
+## Usage
 
-```
-curl http://localhost:9310/eseries?target=eseries1
-curl http://localhost:9310/eseries?target=eseries2&module=status-only
-```
+### Binaries
 
-If no `timeout` is defined the default is `10`.
+Download the latest release for your platform.
 
-If the HTTP schema used for `proxy_url` is `https` then the exporter will attempt to use the system CA truststore as well as any root CA specified with `root_ca` option.  By default certificate verification is enabled, set `insecure_ssl` to disable SSL verification.
-
-## Dependencies
-
-This exporter expects to communicate with SANtricity Web Services Proxy API and that your storage controllers are already setup to be accessed through that API.
-
-This repo provides a Docker based approach to running the Web Services Proxy:
-
-```
-cd webservices_proxy
-docker build -t webservices_proxy .
+```bash
+./eseries_exporter --config.file=eseries_exporter.yaml
 ```
 
-The above Docker container will have `admin:admin` as the credentials and can be run using a command like the following:
+### Docker
 
-```
-docker run -d --rm -it --name webservices_proxy --network host -e ACCEPT_EULA=true \
--v /var/lib/eseries_webservices_proxy/working:/opt/netapp/webservices_proxy/working \
-webservices_proxy
+```bash
+docker run -d -p 9313:9313 -v "$(pwd)/eseries_exporter.yaml:/eseries_exporter.yaml:ro" sckyzo/eseries_exporter
 ```
 
-**NOTE**: During testing it seemed in order for a Docker based proxy to communicate with E-Series controllers the container had to use the host's network.
+### Querying Metrics
 
-Example of settig up the Web Services Proxy with an E-Series system.  Replace `PASSWORD` with the password for your E-Series system.  Replace `ID` with the name of your system.  With `IP1` and `IP2` with IP addresses of your controllers for the system.
-
+To query the `eseries1` target using the `default` module:
 ```
-curl -X POST -u admin:admin "http://localhost:8080/devmgr/v2/storage-systems" \
--H  "accept: application/json" -H  "Content-Type: application/json" \
--d '{
-  "id": "ID", "controllerAddresses": [ "IP1" , "IP2" ],
-  "acceptCertificate": true, "validate": false, "password": "PASSWORD"
-}'
+curl "http://localhost:9313/eseries?target=eseries1"
 ```
 
-If your storage systems have UUID style IDs this is a way to query the names for each ID:
-
+To query the `eseries2` target using the `status-only` module:
 ```
-$ curl -u admin:admin http://localhost:8080/devmgr/v2/storage-systems 2>/dev/null | \
-  jq -r '.[] | "ID: \(.id)\tname: \(.name)"'
-ID: f0d2fadc-3e16-46c5-b62e-c9ab6d430b50    name: eseries1
-ID: 25db8d36-6732-495d-b693-8add202750d6    name: eseries2
+curl "http://localhost:9313/eseries?target=eseries2&module=status-only"
 ```
 
-## Docker
+## Development
 
-Example of running the Docker container
+### Requirements
+- Go 1.22+
+- Make
 
-```
-docker run -d -p 9313:9313 -v "eseries_exporter.yaml:/eseries_exporter.yaml:ro" treydock/eseries_exporter
-```
+### Build
 
-This repo also provides a Docker Compose file that can be used to run both the Web Services Proxy and this exporter.
-
-```
-docker-compose up -d
-```
-
-See [dependencies section](#dependencies) for steps necessary to bootstrap the Web Services Proxy.
-
-## Install
-
-Download the [latest release](https://github.com/treydock/eseries_exporter/releases)
-
-Add the user that will run `eseries_exporter`
-
-```
-groupadd -r eseries_exporter
-useradd -r -d /var/lib/eseries_exporter -s /sbin/nologin -M -g eseries_exporter -M eseries_exporter
-```
-
-Install compiled binaries after extracting tar.gz from release page.
-
-```
-cp /tmp/eseries_exporter /usr/local/bin/eseries_exporter
-```
-
-Install the necessary dependencies, see [dependencies section](#dependencies)
-
-Add the necessary config, see [configuration section](#configuration)
-
-Add systemd unit file and start service. Modify the `ExecStart` with desired flags.
-
-```
-cp systemd/eseries_exporter.service /etc/systemd/system/eseries_exporter.service
-systemctl daemon-reload
-systemctl start eseries_exporter
-```
-
-## Build from source
-
-To produce the `eseries_exporter` binary:
-
-```
+```bash
 make build
 ```
 
-Or
+### Test
 
-```
-go get github.com/treydock/eseries_exporter
-```
-
-## Prometheus configs
-
-The following example assumes this exporter is running on the Prometheus server and communicating to the remote E-Series API.
-
-```yaml
-- job_name: eseries
-  metrics_path: /eseries
-  static_configs:
-  - targets:
-    - eseries1
-    - eseries2
-  relabel_configs:
-  - source_labels: [__address__]
-    target_label: __param_target
-  - source_labels: [__param_target]
-    target_label: instance
-  - target_label: __address__
-    replacement: 127.0.0.1:9313
-- job_name: eseries-metrics
-  metrics_path: /metrics
-  static_configs:
-  - targets:
-    - localhost:9313
+```bash
+make test
 ```
 
-The following is an example if your E-Series web proxy is using UUIDs or other cryptic IDs:
+### Lint
 
-```yaml
-- job_name: eseries
-  metrics_path: /eseries
-  static_configs:
-  - targets:
-    - f0d2fadc-3e16-46c5-b62e-c9ab6d430b50
-    labels:
-      name: eseries1
-  - targets:
-    - 25db8d36-6732-495d-b693-8add202750d6
-    labels:
-      name: eseries2
-  relabel_configs:
-  - source_labels: [__address__]
-    target_label: __param_target
-  - target_label: __address__
-    replacement: 127.0.0.1:9313
-  - source_labels: [name]
-    target_label: instance
-  - regex: '^(name)$'
-    action: labeldrop
+```bash
+make lint
 ```
+
+## Dependencies
+
+This exporter expects to communicate with SANtricity Web Services Proxy API. Ensure your storage controllers are accessible through that API.
+
+See `webservices_proxy/` directory for a Docker-based approach to running the Web Services Proxy.

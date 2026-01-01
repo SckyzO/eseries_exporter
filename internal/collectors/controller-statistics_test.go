@@ -1,28 +1,7 @@
-// MIT License
-//
-// Copyright (c) 2020 Ohio Supercomputer Center
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-
 package collector
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -30,9 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/treydock/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 func TestControllerStatisticsCollector(t *testing.T) {
@@ -48,19 +26,18 @@ func TestControllerStatisticsCollector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error loading fixture data: %s", err.Error())
 	}
-	expected := `
-	# HELP eseries_controller_average_read_op_size_bytes Controller statistic averageReadOpSize
-	# TYPE eseries_controller_average_read_op_size_bytes gauge
-	eseries_controller_average_read_op_size_bytes{controller="070000000000000000000001",controller_label="A"} 39687.27392305163
-	eseries_controller_average_read_op_size_bytes{controller="070000000000000000000002",controller_label="B"} 73664.54585344449
-	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
-	# TYPE eseries_exporter_collect_error gauge
-	eseries_exporter_collect_error{collector="controller-statistics"} 0
-	`
+	expected := `# HELP eseries_controller_average_read_op_size_bytes Controller statistic averageReadOpSize
+# TYPE eseries_controller_average_read_op_size_bytes gauge
+eseries_controller_average_read_op_size_bytes{controller="070000000000000000000001",controller_label="A"} 39687.27392305163
+eseries_controller_average_read_op_size_bytes{controller="070000000000000000000002",controller_label="B"} 73664.54585344449
+# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
+# TYPE eseries_exporter_collect_error gauge
+eseries_exporter_collect_error{collector="controller-statistics"} 0
+`
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if strings.HasSuffix(req.URL.Path, "hardware-inventory") {
 			_, _ = rw.Write(inventoryData)
-		} else if strings.HasSuffix(req.URL.Path, "analysed-controller-statistics") {
+		} else if strings.HasSuffix(req.URL.Path, "analyzed/controller-statistics") {
 			_, _ = rw.Write(analyzedControllerData)
 		} else {
 			_, _ = rw.Write(controllerData)
@@ -75,8 +52,7 @@ func TestControllerStatisticsCollector(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewControllerStatisticsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {
@@ -92,11 +68,10 @@ func TestControllerStatisticsCollector(t *testing.T) {
 }
 
 func TestControllerStatisticsCollectorError(t *testing.T) {
-	expected := `
-	# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
-	# TYPE eseries_exporter_collect_error gauge
-	eseries_exporter_collect_error{collector="controller-statistics"} 1
-	`
+	expected := `# HELP eseries_exporter_collect_error Indicates if error has occurred during collection
+# TYPE eseries_exporter_collect_error gauge
+eseries_exporter_collect_error{collector="controller-statistics"} 1
+`
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "error", http.StatusNotFound)
 	}))
@@ -109,8 +84,7 @@ func TestControllerStatisticsCollectorError(t *testing.T) {
 		BaseURL:    baseURL,
 		HttpClient: &http.Client{},
 	}
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	collector := NewControllerStatisticsExporter(target, logger)
 	gatherers := setupGatherer(collector)
 	if val, err := testutil.GatherAndCount(gatherers); err != nil {

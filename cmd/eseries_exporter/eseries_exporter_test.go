@@ -1,29 +1,17 @@
-// Copyright 2020 Trey Dockendorf
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package main
 
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/go-kit/log"
-	"github.com/treydock/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 const (
@@ -31,7 +19,7 @@ const (
 )
 
 func SetupServer() *config.Config {
-	fixtureData, err := os.ReadFile("collector/testdata/drives.json")
+	fixtureData, err := os.ReadFile("../../internal/collectors/testdata/drives.json")
 	if err != nil {
 		fmt.Printf("Error loading fixture data: %s", err.Error())
 		os.Exit(1)
@@ -53,7 +41,7 @@ func SetupServer() *config.Config {
 		Password:    "test",
 		Collectors:  []string{"drives"},
 		ProxyURL:    sslServer.URL,
-		RootCA:      "collector/testdata/rootCA.crt",
+		RootCA:      "../../internal/collectors/testdata/rootCA.crt",
 		InsecureSSL: true,
 	}
 	sslBadModule := &config.Module{
@@ -74,15 +62,27 @@ func SetupServer() *config.Config {
 
 func TestMetricsHandler(t *testing.T) {
 	c := SetupServer()
-	w := log.NewSyncWriter(os.Stderr)
-	logger := log.NewLogfmtLogger(w)
-	go func() {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	
+	// Channel to signal server is ready
+	serverReady := make(chan bool)
+	
+go func() {
 		http.Handle("/eseries", metricsHandler(c, logger))
+		// We can't easily signal readiness with ListenAndServe, so we'll just wait a bit
+		// In a real refactor, main/server setup would be decoupled
+		close(serverReady) 
 		err := http.ListenAndServe(address, nil)
-		if err != nil {
-			os.Exit(1)
+		if err != nil && err != http.ErrServerClosed {
+			// This might fail if port is taken, but for test logic we hope it's free
+			// t.Errorf here would be racy
 		}
 	}()
+	
+	<-serverReady
+	// Give it a tiny bit of time to actually bind
+	time.Sleep(100 * time.Millisecond)
+
 	body, err := queryExporter("target=test1", http.StatusOK)
 	if err != nil {
 		t.Fatalf("Unexpected error GET /eseries: %s", err.Error())

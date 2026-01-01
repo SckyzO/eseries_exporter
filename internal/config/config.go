@@ -20,7 +20,7 @@ import (
 	"os"
 	"sync"
 
-	yaml "gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -60,7 +60,7 @@ func (sc *SafeConfig) ReloadConfig(configFile string) error {
 	}
 	defer yamlReader.Close()
 	decoder := yaml.NewDecoder(yamlReader)
-	decoder.KnownFields(true)
+	decoder.SetStrict(true)
 	if err := decoder.Decode(c); err != nil {
 		return fmt.Errorf("Error parsing config file %s: %s", configFile, err)
 	}

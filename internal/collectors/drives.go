@@ -1,28 +1,14 @@
-// Copyright 2020 Trey Dockendorf
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package collector
 
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/treydock/eseries_exporter/config"
+	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 var (
@@ -62,14 +48,14 @@ type DrivePhysicalLocation struct {
 type DrivesCollector struct {
 	Status *prometheus.Desc
 	target config.Target
-	logger log.Logger
+	logger *slog.Logger
 }
 
 func init() {
 	registerCollector("drives", true, NewDrivesExporter)
 }
 
-func NewDrivesExporter(target config.Target, logger log.Logger) Collector {
+func NewDrivesExporter(target config.Target, logger *slog.Logger) Collector {
 	return &DrivesCollector{
 		Status: prometheus.NewDesc(prometheus.BuildFQName(namespace, "drive", "status"),
 			"Drive status", []string{"tray", "slot", "status"}, nil),
@@ -83,12 +69,12 @@ func (c *DrivesCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *DrivesCollector) Collect(ch chan<- prometheus.Metric) {
-	level.Debug(c.logger).Log("msg", "Collecting drives metrics")
+	c.logger.Debug("Collecting drives metrics")
 	collectTime := time.Now()
 	var errorMetric int
 	metrics, err := c.collect()
 	if err != nil {
-		level.Error(c.logger).Log("msg", err)
+		c.logger.Error("Collection failed", "error", err)
 		errorMetric = 1
 	}
 
@@ -104,7 +90,7 @@ func (c *DrivesCollector) Collect(ch chan<- prometheus.Metric) {
 		d.Slot = strconv.Itoa(d.PhysicalLocation.Slot)
 		id := fmt.Sprintf("%s-%s", d.TrayID, d.Slot)
 		if sliceContains(ids, id) {
-			level.Error(c.logger).Log("msg", "Duplicate drive entry detected, skipping.", "tray", d.TrayID, "slot", d.Slot, "status", d.Status)
+			c.logger.Error("Duplicate drive entry detected, skipping", "tray", d.TrayID, "slot", d.Slot, "status", d.Status)
 			errorMetric = 1
 			continue
 		}
