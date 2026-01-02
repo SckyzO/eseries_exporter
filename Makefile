@@ -50,7 +50,7 @@ package: build-all ## Create tar.gz packages for all platforms
 			cd $(BUILD_DIR)/pkg && zip -r ../$${name}.zip * > /dev/null; \
 		else \
 			cp $$file $(BUILD_DIR)/pkg/$(BINARY_NAME); \
-			tar -czf $$file.tar.gz -C $(BUILD_DIR)/pkg .; \
+			tar -czf $$file.tar.gz -C $(BUILD_DIR)/pkg $(BINARY_NAME) LICENSE README.md; \
 		fi; \
 	done
 	@rm -rf $(BUILD_DIR)/pkg
