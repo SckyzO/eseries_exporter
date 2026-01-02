@@ -36,6 +36,19 @@ build-all: ## Build binaries for multiple platforms
 	GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)_darwin_amd64 $(MAIN_PATH)
 	GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)_darwin_arm64 $(MAIN_PATH)
 
+.PHONY: package
+package: build-all ## Create tar.gz packages for all platforms
+	@echo "Packaging binaries..."
+	@for file in $(BUILD_DIR)/*; do \
+		name=$$(basename $$file); \
+		if [ "$${name##*.}" = "exe" ]; then \
+			zip -j $${file%.exe}.zip $$file LICENSE README.md; \
+		else \
+			tar -czf $$file.tar.gz -C $(BUILD_DIR) $$name -C .. LICENSE README.md; \
+		fi; \
+	done
+	@rm -f $(BUILD_DIR)/$(BINARY_NAME)_*amd64 $(BUILD_DIR)/$(BINARY_NAME)_*arm64 $(BUILD_DIR)/$(BINARY_NAME)_*.exe
+
 .PHONY: test
 test: ## Run tests
 	@echo "Running tests..."
