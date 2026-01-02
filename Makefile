@@ -39,14 +39,21 @@ build-all: ## Build binaries for multiple platforms
 .PHONY: package
 package: build-all ## Create tar.gz packages for all platforms
 	@echo "Packaging binaries..."
-	@for file in $(BUILD_DIR)/*; do \
+	@mkdir -p $(BUILD_DIR)/pkg
+	@for file in $(BUILD_DIR)/$(BINARY_NAME)_*; do \
+		if echo "$$file" | grep -q -E '\.tar\.gz$$|\.zip$$'; then continue; fi; \
 		name=$$(basename $$file); \
-		if [ "$${name##*.}" = "exe" ]; then \
-			zip -j $${file%.exe}.zip $$file LICENSE README.md; \
+		rm -rf $(BUILD_DIR)/pkg/*; \
+		cp LICENSE README.md $(BUILD_DIR)/pkg/; \
+		if echo "$$name" | grep -q "\.exe$$"; then \
+			cp $$file $(BUILD_DIR)/pkg/$(BINARY_NAME).exe; \
+			cd $(BUILD_DIR)/pkg && zip -r ../$${name}.zip * > /dev/null; \
 		else \
-			tar -czf $$file.tar.gz -C $(BUILD_DIR) $$name -C .. LICENSE README.md; \
+			cp $$file $(BUILD_DIR)/pkg/$(BINARY_NAME); \
+			tar -czf $$file.tar.gz -C $(BUILD_DIR)/pkg .; \
 		fi; \
 	done
+	@rm -rf $(BUILD_DIR)/pkg
 	@rm -f $(BUILD_DIR)/$(BINARY_NAME)_*amd64 $(BUILD_DIR)/$(BINARY_NAME)_*arm64 $(BUILD_DIR)/$(BINARY_NAME)_*.exe
 
 .PHONY: test
