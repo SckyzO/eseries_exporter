@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
@@ -52,7 +53,7 @@ func NewCollector(target config.Target, logger *slog.Logger) *EseriesCollector {
 		} else if sliceContains(target.Collectors, key) {
 			enable = true
 		}
-		
+
 		if enable {
 			// Create a child logger with collector context
 			collectorLogger := logger.With("collector", key, "target", target.Name)
@@ -81,7 +82,7 @@ func getRequest(target config.Target, path string, logger *slog.Logger) ([]byte,
 		// Fallback to original URL if unescape fails
 		unescaped = u.String()
 	}
-	
+
 	req, err := http.NewRequest("GET", unescaped, nil)
 	if err != nil {
 		return nil, err
@@ -90,7 +91,7 @@ func getRequest(target config.Target, path string, logger *slog.Logger) ([]byte,
 	req.SetBasicAuth(target.User, target.Password)
 
 	logger.Debug("Performing GET request", "url", u.String())
-	
+
 	resp, err := target.HttpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -98,12 +99,12 @@ func getRequest(target config.Target, path string, logger *slog.Logger) ([]byte,
 	defer func() {
 		_ = resp.Body.Close()
 	}()
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if resp.StatusCode != http.StatusOK {
 		logger.Error("Response error", "code", resp.StatusCode, "body", string(body))
 		return nil, fmt.Errorf("%s", body)

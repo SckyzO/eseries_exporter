@@ -63,22 +63,22 @@ func SetupServer() *config.Config {
 func TestMetricsHandler(t *testing.T) {
 	c := SetupServer()
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	
+
 	// Channel to signal server is ready
 	serverReady := make(chan bool)
-	
-go func() {
+
+	go func() {
 		http.Handle("/eseries", metricsHandler(c, logger))
 		// We can't easily signal readiness with ListenAndServe, so we'll just wait a bit
 		// In a real refactor, main/server setup would be decoupled
-		close(serverReady) 
+		close(serverReady)
 		err := http.ListenAndServe(address, nil)
 		if err != nil && err != http.ErrServerClosed {
 			// This might fail if port is taken, but for test logic we hope it's free
 			fmt.Printf("Server error: %v\n", err)
 		}
 	}()
-	
+
 	<-serverReady
 	// Give it a tiny bit of time to actually bind
 	time.Sleep(100 * time.Millisecond)

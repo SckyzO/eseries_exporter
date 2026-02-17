@@ -14,7 +14,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
-	"github.com/sckyzo/eseries_exporter/internal/collectors"
+
+	collector "github.com/sckyzo/eseries_exporter/internal/collectors"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
@@ -90,7 +91,7 @@ func metricsHandler(c *config.Config, logger *slog.Logger) http.HandlerFunc {
 
 		registry := prometheus.NewRegistry()
 		eseriesCollector := collector.NewCollector(target, logger)
-		
+
 		// Register all sub-collectors
 		for _, col := range eseriesCollector.Collectors {
 			if err := registry.Register(col); err != nil {
@@ -143,7 +144,7 @@ func main() {
 
 	http.Handle("/metrics", promhttp.Handler())
 	http.Handle("/eseries", metricsHandler(sc.C, logger))
-	
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
 			<head><title>E-Series Exporter</title></head>
