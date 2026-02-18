@@ -1,0 +1,61 @@
+[
+  {
+    "id": "020000006D039EA000CF32BB000000DF68E4DA35",
+    "name": "Volume_1",
+    "label": "Volume_1",
+    "capacity": "51316269252608",
+    "totalSizeInBytes": "51316269252608",
+    "status": "optimal",
+    "thinProvisioned": false,
+    "listOfMappings": [
+      {
+        "lunMappingRef": "8800000007000000000000000000000000000000",
+        "lun": 1,
+        "ssid": 0,
+        "perms": 15,
+        "volumeRef": "020000006D039EA000CF32BB000000DF68E4DA35",
+        "type": "cluster",
+        "mapRef": "850000006D039EA000D1A0370036010068E4C911",
+        "id": "8800000007000000000000000000000000000000"
+      }
+    ],
+    "volumeGroupRef": "040000006D039EA000CF32BB000000D868E4C6E2",
+    "diskPool": true,
+    "offline": false,
+    "mapped": true,
+    "raidLevel": "raid6",
+    "volumeUse": "standardVolume"
+  },
+  {
+    "id": "020000006D039EA000CF32BB000000E068E4DA36",
+    "name": "Volume_2",
+    "label": "Volume_2",
+    "capacity": "51316269252608",
+    "totalSizeInBytes": "51316269252608",
+    "status": "optimal",
+    "thinProvisioned": true,
+    "listOfMappings": [],
+    "volumeGroupRef": "040000006D039EA000CF32BB000000D868E4C6E2",
+    "diskPool": true,
+    "offline": false,
+    "mapped": false,
+    "raidLevel": "raid6",
+    "volumeUse": "thinVolume"
+  },
+  {
+    "id": "020000006D039EA000CF32BB000000E168E4DA37",
+    "name": "Volume_3",
+    "label": "Volume_3",
+    "capacity": "10737418240",
+    "totalSizeInBytes": "10737418240",
+    "status": "failed",
+    "thinProvisioned": false,
+    "listOfMappings": [],
+    "volumeGroupRef": "040000006D039EA000CF32BB000000D868E4C6E2",
+    "diskPool": true,
+    "offline": true,
+    "mapped": false,
+    "raidLevel": "raid6",
+    "volumeUse": "standardVolume"
+  }
+]

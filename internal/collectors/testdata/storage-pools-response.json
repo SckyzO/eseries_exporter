@@ -1,0 +1,49 @@
+[
+  {
+    "id": "040000006D039EA000CF32BB000000D868E4C6E2",
+    "name": "Pool_1",
+    "label": "Pool_1",
+    "totalRaidedSpace": "102632538505216",
+    "usedSpace": "102632538505216",
+    "freeSpace": "0",
+    "raidLevel": "raidDiskPool",
+    "raidStatus": "optimal",
+    "state": "complete",
+    "diskPool": true,
+    "offline": false,
+    "volumeGroupData": {
+      "type": "diskPool",
+      "diskPoolData": {
+        "reconstructionReservedDriveCount": 1,
+        "reconstructionReservedAmt": "11750493650944",
+        "reconstructionReservedDriveCountCurrent": 1,
+        "poolUtilizationWarningThreshold": 0,
+        "poolUtilizationCriticalThreshold": 0,
+        "poolUtilizationState": "utilizationOptimal",
+        "unusableCapacity": "0",
+        "degradedReconstructPriority": "high",
+        "criticalReconstructPriority": "highest",
+        "backgroundOperationPriority": "low",
+        "allocGranularity": "4294967296",
+        "minimumDriveCount": 11,
+        "poolVersion": 1
+      }
+    }
+  },
+  {
+    "id": "040000006D039EA000CF32BB000000D868E4C6E3",
+    "name": "Pool_2",
+    "label": "Pool_2",
+    "totalRaidedSpace": "50000000000000",
+    "usedSpace": "30000000000000",
+    "freeSpace": "20000000000000",
+    "raidLevel": "raid5",
+    "raidStatus": "degraded",
+    "state": "reconstructing",
+    "diskPool": false,
+    "offline": false,
+    "volumeGroupData": {
+      "type": "unknown"
+    }
+  }
+]
