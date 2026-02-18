@@ -1274,7 +1274,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 38,
+  "schemaVersion": 41,
   "style": "dark",
   "tags": [
     "netapp",
