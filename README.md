@@ -151,6 +151,186 @@ To query a different target using the `status-only` module:
 curl "http://localhost:9313/eseries?target=<storage-system-id>&module=status-only"
 ```
 
+## Prometheus Configuration
+
+### Basic Configuration
+
+Add the E-Series exporter to your `prometheus.yml`:
+
+```yaml
+scrape_configs:
+  # Scrape exporter's own metrics
+  - job_name: 'eseries-exporter'
+    static_configs:
+      - targets: ['localhost:9313']
+
+  # Scrape E-Series storage systems
+  - job_name: 'eseries'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    metrics_path: /eseries
+    static_configs:
+      - targets:
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890  # Storage system ID
+          - b2c3d4e5-f6a7-8901-bcde-f12345678901  # Another storage system
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9313
+```
+
+### Configuration with Multiple Modules
+
+Use different modules for different monitoring needs:
+
+```yaml
+scrape_configs:
+  # Full monitoring (all collectors)
+  - job_name: 'eseries-full'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    metrics_path: /eseries
+    params:
+      module: [default]
+    static_configs:
+      - targets:
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9313
+
+  # Status-only monitoring (faster, less data)
+  - job_name: 'eseries-status'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    metrics_path: /eseries
+    params:
+      module: [status-only]
+    static_configs:
+      - targets:
+          - b2c3d4e5-f6a7-8901-bcde-f12345678901
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9313
+
+  # Capacity monitoring
+  - job_name: 'eseries-capacity'
+    scrape_interval: 300s  # Every 5 minutes
+    scrape_timeout: 30s
+    metrics_path: /eseries
+    params:
+      module: [capacity]
+    static_configs:
+      - targets:
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9313
+```
+
+### Configuration with Basic Authentication
+
+If the exporter is protected with Basic Auth:
+
+```yaml
+scrape_configs:
+  - job_name: 'eseries'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    metrics_path: /eseries
+    basic_auth:
+      username: prometheus
+      password: your-password
+    static_configs:
+      - targets:
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9313
+```
+
+### Configuration with TLS
+
+For HTTPS endpoints:
+
+```yaml
+scrape_configs:
+  - job_name: 'eseries'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    metrics_path: /eseries
+    scheme: https
+    tls_config:
+      ca_file: /etc/prometheus/certs/ca.crt
+      cert_file: /etc/prometheus/certs/client.crt
+      key_file: /etc/prometheus/certs/client.key
+      # Or skip verification (not recommended for production)
+      # insecure_skip_verify: true
+    static_configs:
+      - targets:
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: exporter.example.com:9313
+```
+
+### Service Discovery with File-based Configuration
+
+For dynamic storage system discovery:
+
+Create `eseries_targets.yml`:
+```yaml
+- targets:
+    - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    - b2c3d4e5-f6a7-8901-bcde-f12345678901
+  labels:
+    env: production
+    site: datacenter1
+```
+
+Configure Prometheus:
+```yaml
+scrape_configs:
+  - job_name: 'eseries'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    metrics_path: /eseries
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/eseries_targets.yml
+        refresh_interval: 5m
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9313
+```
+
 ## Development
 
 ### Requirements
