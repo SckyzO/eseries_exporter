@@ -153,6 +153,14 @@ curl "http://localhost:9313/eseries?target=<storage-system-id>&module=status-onl
 
 ## Prometheus Configuration
 
+The exporter uses **modules** to define different monitoring profiles. Modules are configured in `eseries_exporter.yaml` and called via the `module` URL parameter.
+
+Available modules (from examples/eseries_exporter.yaml):
+- `default` - All collectors enabled (full monitoring)
+- `status-only` - Only status collectors (storage-systems, drives, hardware-inventory)
+- `performance` - Performance metrics (controller-statistics, system-statistics, drive-statistics)
+- `capacity` - Capacity metrics (storage-systems, storage-pools, volumes)
+
 ### Basic Configuration
 
 Add the E-Series exporter to your `prometheus.yml`:
@@ -164,11 +172,13 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9313']
 
-  # Scrape E-Series storage systems
+  # Scrape E-Series storage systems with default module
   - job_name: 'eseries'
     scrape_interval: 60s
     scrape_timeout: 30s
     metrics_path: /eseries
+    params:
+      module: [default]  # Use the 'default' module from eseries_exporter.yaml
     static_configs:
       - targets:
           - a1b2c3d4-e5f6-7890-abcd-ef1234567890  # Storage system ID
@@ -182,19 +192,22 @@ scrape_configs:
         replacement: localhost:9313
 ```
 
+**Note**: If `module` parameter is not specified, the `default` module is used automatically.
+
 ### Configuration with Multiple Modules
 
-Use different modules for different monitoring needs:
+Use different modules for different monitoring needs. Each scrape job calls a specific module with `params: module: [module-name]`:
 
 ```yaml
 scrape_configs:
-  # Full monitoring (all collectors)
+  # Module 'default': Full monitoring (all collectors)
+  # Corresponds to the 'default' module in eseries_exporter.yaml
   - job_name: 'eseries-full'
     scrape_interval: 60s
     scrape_timeout: 30s
     metrics_path: /eseries
     params:
-      module: [default]
+      module: [default]  # Calls the 'default' module
     static_configs:
       - targets:
           - a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -206,13 +219,14 @@ scrape_configs:
       - target_label: __address__
         replacement: localhost:9313
 
-  # Status-only monitoring (faster, less data)
+  # Module 'status-only': Status monitoring (faster, less data)
+  # Corresponds to the 'status-only' module in eseries_exporter.yaml
   - job_name: 'eseries-status'
     scrape_interval: 30s
     scrape_timeout: 15s
     metrics_path: /eseries
     params:
-      module: [status-only]
+      module: [status-only]  # Calls the 'status-only' module
     static_configs:
       - targets:
           - b2c3d4e5-f6a7-8901-bcde-f12345678901
@@ -224,13 +238,33 @@ scrape_configs:
       - target_label: __address__
         replacement: localhost:9313
 
-  # Capacity monitoring
+  # Module 'capacity': Capacity monitoring only
+  # Corresponds to the 'capacity' module in eseries_exporter.yaml
   - job_name: 'eseries-capacity'
-    scrape_interval: 300s  # Every 5 minutes
+    scrape_interval: 300s  # Every 5 minutes (capacity changes slowly)
     scrape_timeout: 30s
     metrics_path: /eseries
     params:
-      module: [capacity]
+      module: [capacity]  # Calls the 'capacity' module
+    static_configs:
+      - targets:
+          - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9313
+
+  # Module 'performance': Performance metrics only
+  # Corresponds to the 'performance' module in eseries_exporter.yaml
+  - job_name: 'eseries-performance'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    metrics_path: /eseries
+    params:
+      module: [performance]  # Calls the 'performance' module
     static_configs:
       - targets:
           - a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -242,6 +276,12 @@ scrape_configs:
       - target_label: __address__
         replacement: localhost:9313
 ```
+
+**How module selection works:**
+1. Define modules in `eseries_exporter.yaml` with different collector sets
+2. In Prometheus, use `params: module: [module-name]` to select which module to use
+3. The URL becomes: `http://localhost:9313/eseries?target=xxx&module=module-name`
+4. If no module is specified, `default` is used
 
 ### Configuration with Basic Authentication
 
