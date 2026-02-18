@@ -1,0 +1,55 @@
+# Example web configuration for TLS and Basic Authentication
+# See https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
+
+# Basic Authentication
+# Generate password hash with: htpasswd -nBC 10 "" | tr -d ':\n'
+basic_auth_users:
+  prometheus: $2y$10$5Z4QZ5Z5Z5Z5Z5Z5Z5Z5Z5OeGw8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q  # password: changeme
+
+# TLS Configuration
+tls_server_config:
+  # Server certificate and key
+  cert_file: /path/to/server.crt
+  key_file: /path/to/server.key
+
+  # Client certificate authentication (mTLS) - optional
+  #client_auth_type: RequireAndVerifyClientCert
+  #client_ca_file: /path/to/ca.crt
+
+  # TLS version constraints
+  min_version: TLS12
+  max_version: TLS13
+
+  # Cipher suites for TLS <= 1.2 - optional
+  #cipher_suites:
+  #  - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+  #  - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+  #  - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+  #  - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+
+  # Prefer server's cipher suite order
+  prefer_server_cipher_suites: true
+
+  # Elliptic curves for ECDHE handshakes - optional
+  #curve_preferences:
+  #  - CurveP521
+  #  - CurveP384
+  #  - CurveP256
+
+# HTTP server configuration
+http_server_config:
+  # Enable HTTP/2 (requires TLS)
+  http2: true
+
+  # Security headers
+  headers:
+    Strict-Transport-Security: "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options: "nosniff"
+    X-Frame-Options: "DENY"
+    X-XSS-Protection: "1; mode=block"
+
+# Rate limiting - optional
+#http_server_config:
+#  rate_limit:
+#    interval: 1s
+#    burst: 100

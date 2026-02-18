@@ -1,0 +1,6 @@
+# Simple Basic Authentication configuration
+# Generate password hash with: htpasswd -nBC 10 "" | tr -d ':\n'
+
+basic_auth_users:
+  prometheus: $2y$10$5Z4QZ5Z5Z5Z5Z5Z5Z5Z5Z5OeGw8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q  # password: changeme
+  admin: $2y$10$6A6QA6A6A6A6A6A6A6A6A6PfHx9R9R9R9R9R9R9R9R9R9R9R9R9R9R  # password: admin123

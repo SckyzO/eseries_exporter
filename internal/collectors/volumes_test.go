@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 

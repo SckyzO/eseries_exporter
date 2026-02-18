@@ -14,16 +14,18 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
+	"github.com/prometheus/exporter-toolkit/web"
+	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
 
 	collector "github.com/sckyzo/eseries_exporter/internal/collectors"
 	"github.com/sckyzo/eseries_exporter/internal/config"
 )
 
 var (
-	configFile    = kingpin.Flag("config.file", "Path to exporter config file").Default("eseries_exporter.yaml").String()
-	listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9313").String()
-	logLevel      = kingpin.Flag("log.level", "Log level (debug, info, warn, error)").Default("info").String()
-	logFormat     = kingpin.Flag("log.format", "Log format (text, json)").Default("text").String()
+	configFile = kingpin.Flag("config.file", "Path to exporter config file").Default("eseries_exporter.yaml").String()
+	webConfig  = kingpinflag.AddFlags(kingpin.CommandLine, ":9313")
+	logLevel   = kingpin.Flag("log.level", "Log level (debug, info, warn, error)").Default("info").String()
+	logFormat  = kingpin.Flag("log.format", "Log format (text, json)").Default("text").String()
 )
 
 func metricsHandler(c *config.Config, logger *slog.Logger) http.HandlerFunc {
@@ -156,8 +158,10 @@ func main() {
 			</html>`))
 	})
 
-	logger.Info("Listening on", "address", *listenAddress)
-	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
+	server := &http.Server{
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	if err := web.ListenAndServe(server, webConfig, logger); err != nil {
 		logger.Error("Error starting server", "error", err)
 		os.Exit(1)
 	}

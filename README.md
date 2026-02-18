@@ -29,6 +29,41 @@ Collectors are enabled or disabled via the config file.
 | storage-systems | Collect status information about storage systems | Enabled |
 | system-statistics | Collect storage system statistics | Enabled |
 | hardware-inventory | Collect hardware inventory statuses | Enabled |
+| **volumes** | Collect volume metrics (capacity, status, thin provisioning, mappings) | **Disabled** |
+| **storage-pools** | Collect storage pool metrics (capacity, utilization, RAID status) | **Disabled** |
+
+## Security (TLS & Basic Authentication)
+
+The exporter supports TLS and Basic Authentication via the Prometheus exporter-toolkit. Create a web configuration file and pass it with `--web.config.file`:
+
+```bash
+eseries_exporter --web.config.file=web-config.yaml
+```
+
+### Basic Authentication Example
+
+Generate a bcrypt password hash:
+```bash
+htpasswd -nBC 10 "" | tr -d ':\n'
+```
+
+Create `web-config.yaml`:
+```yaml
+basic_auth_users:
+  prometheus: $2y$10$... # bcrypt hash
+```
+
+### TLS Example
+
+```yaml
+tls_server_config:
+  cert_file: /path/to/server.crt
+  key_file: /path/to/server.key
+  min_version: TLS12
+  max_version: TLS13
+```
+
+See `examples/web-config.yaml` and `examples/web-config-basic-auth.yaml` for complete examples.
 
 ## Configuration
 
@@ -91,23 +126,37 @@ Download the latest release from the [Releases page](https://github.com/sckyzo/e
 docker run -d -p 9313:9313 -v "$(pwd)/eseries_exporter.yaml:/eseries_exporter.yaml:ro" sckyzo/eseries_exporter
 ```
 
+### Getting Storage System IDs
+
+To retrieve the IDs of your E-Series storage systems from the Web Services Proxy:
+
+```bash
+curl -k -u admin https://localhost:8443/devmgr/v2/storage-systems | jq -r '.[] | "ID: \(.id)\tname: \(.name)"'
+```
+
+This will output:
+```
+ID: a2b84075-cfb6-468f-a53b-ea680868161a	name: da-nfs
+```
+
 ### Querying Metrics
 
-To query the `eseries1` target using the `default` module:
+To query the `a2b84075-cfb6-468f-a53b-ea680868161a` target using the `default` module:
 ```
-curl "http://localhost:9313/eseries?target=eseries1"
+curl "http://localhost:9313/eseries?target=a2b84075-cfb6-468f-a53b-ea680868161a"
 ```
 
-To query the `eseries2` target using the `status-only` module:
+To query a different target using the `status-only` module:
 ```
-curl "http://localhost:9313/eseries?target=eseries2&module=status-only"
+curl "http://localhost:9313/eseries?target=<storage-system-id>&module=status-only"
 ```
 
 ## Development
 
 ### Requirements
-- Go 1.22+
+- Go 1.24+
 - Make
+- Docker (for multi-stage builds)
 
 ### Build
 
