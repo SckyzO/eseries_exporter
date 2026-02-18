@@ -124,3 +124,26 @@ version: ## Show version information
 .PHONY: ci
 ci: lint test build ## Run full CI pipeline (lint + test + build)
 	@echo "CI pipeline completed successfully!"
+
+.PHONY: package
+package: ## Build release packages for multiple architectures
+	@echo "Building release packages for $(VERSION)..."
+	@mkdir -p dist
+	@docker run --rm \
+		-v $(PWD):/app \
+		-w /app \
+		golang:1.24-alpine \
+		sh -c "apk add --no-cache git make ca-certificates && \
+		       CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags='-s -w -X github.com/prometheus/common/version.Version=$(VERSION) -X github.com/prometheus/common/version.Revision=$(COMMIT) -X github.com/prometheus/common/version.BuildDate=$(BUILD_DATE) -X github.com/prometheus/common/version.BuildUser=$(BUILD_USER)' -o dist/$(BINARY_NAME)-linux-amd64 ./cmd/eseries_exporter && \
+		       CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildvcs=false -ldflags='-s -w -X github.com/prometheus/common/version.Version=$(VERSION) -X github.com/prometheus/common/version.Revision=$(COMMIT) -X github.com/prometheus/common/version.BuildDate=$(BUILD_DATE) -X github.com/prometheus/common/version.BuildUser=$(BUILD_USER)' -o dist/$(BINARY_NAME)-linux-arm64 ./cmd/eseries_exporter && \
+		       CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -buildvcs=false -ldflags='-s -w -X github.com/prometheus/common/version.Version=$(VERSION) -X github.com/prometheus/common/version.Revision=$(COMMIT) -X github.com/prometheus/common/version.BuildDate=$(BUILD_DATE) -X github.com/prometheus/common/version.BuildUser=$(BUILD_USER)' -o dist/$(BINARY_NAME)-darwin-amd64 ./cmd/eseries_exporter && \
+		       CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -buildvcs=false -ldflags='-s -w -X github.com/prometheus/common/version.Version=$(VERSION) -X github.com/prometheus/common/version.Revision=$(COMMIT) -X github.com/prometheus/common/version.BuildDate=$(BUILD_DATE) -X github.com/prometheus/common/version.BuildUser=$(BUILD_USER)' -o dist/$(BINARY_NAME)-darwin-arm64 ./cmd/eseries_exporter"
+	@cd dist && for binary in $(BINARY_NAME)-*; do \
+		platform=$$(echo $$binary | sed 's/$(BINARY_NAME)-//'); \
+		mkdir -p $(BINARY_NAME)-$(VERSION)-$$platform; \
+		cp $$binary $(BINARY_NAME)-$(VERSION)-$$platform/$(BINARY_NAME); \
+		tar czf $(BINARY_NAME)-$(VERSION)-$$platform.tar.gz $(BINARY_NAME)-$(VERSION)-$$platform; \
+		rm -rf $(BINARY_NAME)-$(VERSION)-$$platform $$binary; \
+	done
+	@echo "Release packages created in dist/"
+	@ls -lh dist/

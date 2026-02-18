@@ -1,0 +1,85 @@
+# NetApp E-Series Exporter Configuration
+# This file defines modules (target configurations) for monitoring E-Series storage systems
+
+modules:
+  # Default module with all collectors enabled
+  default:
+    user: monitor
+    password: secret
+    proxy_url: https://webservices-proxy.example.com:8443
+    timeout: 30
+    # Optional: Root CA certificate for HTTPS proxy
+    # root_ca: /etc/ssl/certs/ca-certificates.crt
+    # Optional: Skip SSL certificate verification (not recommended for production)
+    insecure_ssl: false
+    # Optional: Specify which collectors to enable (if not specified, defaults are used)
+    collectors:
+      - storage-systems
+      - drives
+      - controller-statistics
+      - system-statistics
+      - hardware-inventory
+      - volumes
+      - storage-pools
+
+  # Module for status monitoring only (minimal collectors)
+  status-only:
+    user: monitor
+    password: secret
+    proxy_url: https://webservices-proxy.example.com:8443
+    timeout: 30
+    collectors:
+      - storage-systems
+      - drives
+      - hardware-inventory
+
+  # Module for performance monitoring
+  performance:
+    user: monitor
+    password: secret
+    proxy_url: https://webservices-proxy.example.com:8443
+    timeout: 30
+    collectors:
+      - controller-statistics
+      - system-statistics
+      - drive-statistics
+
+  # Module for capacity monitoring
+  capacity:
+    user: monitor
+    password: secret
+    proxy_url: https://webservices-proxy.example.com:8443
+    timeout: 30
+    collectors:
+      - storage-systems
+      - storage-pools
+      - volumes
+
+  # Example with HTTPS and custom root CA
+  secure-proxy:
+    user: monitor
+    password: secret
+    proxy_url: https://secure-proxy.example.com:8443
+    root_ca: /etc/ssl/certs/company-ca.pem
+    insecure_ssl: false
+    timeout: 30
+
+# Available collectors:
+# - storage-systems: Storage system status and info (enabled by default)
+# - drives: Drive status and health (enabled by default)
+# - controller-statistics: Controller performance metrics (enabled by default)
+# - system-statistics: System-level performance metrics (enabled by default)
+# - hardware-inventory: Hardware component status (enabled by default)
+# - volumes: Volume capacity and status (disabled by default)
+# - storage-pools: Storage pool capacity and utilization (disabled by default)
+# - drive-statistics: Per-drive performance metrics (disabled by default)
+
+# Usage examples:
+# Query with default module:
+#   curl "http://localhost:9313/eseries?target=<storage-system-id>"
+#
+# Query with specific module:
+#   curl "http://localhost:9313/eseries?target=<storage-system-id>&module=status-only"
+#
+# Get storage system IDs from Web Services Proxy:
+#   curl -k -u admin https://webservices-proxy.example.com:8443/devmgr/v2/storage-systems | jq -r '.[] | "ID: \(.id)\tname: \(.name)"'
