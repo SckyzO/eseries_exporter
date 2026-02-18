@@ -136,14 +136,14 @@ curl -k -u admin https://localhost:8443/devmgr/v2/storage-systems | jq -r '.[] |
 
 This will output:
 ```
-ID: a2b84075-cfb6-468f-a53b-ea680868161a	name: da-nfs
+ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890	name: my-storage-system
 ```
 
 ### Querying Metrics
 
-To query the `a2b84075-cfb6-468f-a53b-ea680868161a` target using the `default` module:
+To query a storage system using the `default` module:
 ```
-curl "http://localhost:9313/eseries?target=a2b84075-cfb6-468f-a53b-ea680868161a"
+curl "http://localhost:9313/eseries?target=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 ```
 
 To query a different target using the `status-only` module:
